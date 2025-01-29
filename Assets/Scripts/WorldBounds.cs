@@ -1,4 +1,6 @@
 using UnityEngine;
+using GluonGui.Dialog;
+
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -42,7 +44,7 @@ namespace Freehill.Boids
             if (newPosition.x < _bounds.min.x || newPosition.x > _bounds.max.x) { movement.x *= -1.0f; }
             if (newPosition.y < _bounds.min.y || newPosition.y > _bounds.max.y) { movement.y *= -1.0f; }
             if (newPosition.z < _bounds.min.z || newPosition.z > _bounds.max.z) { movement.z *= -1.0f; }
-
+            
             return movement;
         }
 
@@ -156,6 +158,24 @@ namespace Freehill.Boids
             float d = Vector3.Dot(planeNormal, pointInPlane);
 
             return Mathf.Abs(Vector3.Dot(planeNormal, point) - d) < EPSILON;
+        }
+
+        /// <summary>
+        /// Fills the three vectors containing the shortest distances to the x, y, and z planes of this bounds to the given point.
+        /// All vectors point into the bounds.
+        /// </summary>
+        public void GetBoundaryOffsets(Vector3 point, ref Vector3 xOffset, ref Vector3 yOffset, ref Vector3 zOffset)
+        {
+            Vector3 centerOffset = point - Center;
+
+            float xDist = Vector3.Dot(centerOffset, Vector3.right);
+            float yDist = Vector3.Dot(centerOffset, Vector3.up);
+            float zDist = Vector3.Dot(centerOffset, Vector3.forward);
+
+            // Extents.x - Abs(xDist) = shortest dist to the x plane, and -Sign(xDist) ensures the vector always points into the bounds
+            xOffset.Set(-Mathf.Sign(xDist) * (Extents.x - Mathf.Abs(xDist)), 0.0f, 0.0f);
+            yOffset.Set(0.0f, -Mathf.Sign(yDist) * (Extents.y - Mathf.Abs(yDist)), 0.0f);
+            zOffset.Set(0.0f, 0.0f, -Mathf.Sign(zDist) * (Extents.z - Mathf.Abs(zDist)));
         }
 
         public bool IntersectLineWithSurface(Vector3 start, Vector3 end, out float distance)

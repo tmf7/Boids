@@ -237,6 +237,10 @@ namespace Freehill.Boids
             return Random.onUnitSphere;
         }
 
+        // FIXME: apply repulsion forces at all bounds planes, don't reflect when outside, apply an approaching weight just like the ground terrain does
+        // ...and if boid happends to be OUTSIDE, then apply a pulling force IN instead of a pushing force IN
+        // ...STILL DO GetAboveGroundPosition
+        // SOLUTION: write a sphere with AABB test and get the overlap
         private void Move()
         {
             Vector3 movement = _velocity * Time.deltaTime;
@@ -260,6 +264,14 @@ namespace Freehill.Boids
             // DEBUG: Vector3.down is tested last for the sake of ground boids' _isTouchingGround to update last
             Vector3 groundPushVector = GetGroundPushFrom(transform.forward) + GetGroundPushFrom(Vector3.down);
 
+            Vector3 xOffset = Vector3.zero;
+            Vector3 yOffset = Vector3.zero;
+            Vector3 zOffset = Vector3.zero;
+            _spawner.WorldBounds.GetBoundaryOffsets(transform.position, ref xOffset, ref yOffset, ref zOffset);
+
+            // TODO: use these vectors for  "proximity", "normal vector", and dot-product with velocity to determine force scaling factors
+
+
             return groundPushVector.normalized;
         }
 
@@ -274,6 +286,7 @@ namespace Freehill.Boids
 
             _isTouchingGround = false;
 
+            // DEBUG: use a single raycast to test the WorldBounds' TerrainCollider, as well as any Attractor' colliders
             if (Physics.Raycast(new Ray(transform.position, direction), out _groundHitInfo, _spawner.GroundProximityRadius))
             {
                 Vector3 toHit = _groundHitInfo.point - transform.position;
