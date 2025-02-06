@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using Unity.VisualScripting;
 using UnityEngine;
 
 // TODO: optimize above 30FPS:
@@ -38,6 +37,11 @@ namespace Freehill.Boids
         private bool _isTouchingAttractor = false;
         private Vector3 _restingNormal;
         private Vector3 _restingPosition;
+
+        // boundary logic
+        private Vector3 _worldOffsetX;
+        private Vector3 _worldOffsetY;
+        private Vector3 _worldOffsetZ;
 
         private readonly int AnimationSpeedParameter = Animator.StringToHash("AnimationSpeed");
 
@@ -84,6 +88,9 @@ namespace Freehill.Boids
         {
             Gizmos.color = Color.red;
             Gizmos.DrawSphere(_groundHitInfo.point, 2.0f);
+
+            Gizmos.color = (_triggered ? Color.red : Color.blue);
+            Gizmos.DrawSphere(transform.position, 0.5f);
         }
 
         private void UpdateVelocity()
@@ -101,7 +108,7 @@ namespace Freehill.Boids
                                  + (random * _spawner.RandomWeight)
                                  + (attraction * _spawner.AttractionWeight)
                                  + (repulsion * _spawner.RepulsionWeight)
-                                 + (worldPush * _spawner.BoundaryWeight)
+                                 + (worldPush * _spawner.BoundaryPushWeight)
                                  + (Physics.gravity * _spawner.GravityWeight);
 
             Vector3 targetVelocity = _velocity + acceleration;// * Time.deltaTime; // DEBUG: SmoothDamp takes care of acceleration
@@ -237,21 +244,17 @@ namespace Freehill.Boids
             return Random.onUnitSphere;
         }
 
-        // FIXME: apply repulsion forces at all bounds planes, don't reflect when outside, apply an approaching weight just like the ground terrain does
-        // ...and if boid happends to be OUTSIDE, then apply a pulling force IN instead of a pushing force IN
-        // ...STILL DO GetAboveGroundPosition
-        // SOLUTION: write a sphere with AABB test and get the overlap
         private void Move()
         {
             Vector3 movement = _velocity * Time.deltaTime;
-            movement = _spawner.WorldBounds.ConstrainMovement(transform.position, movement);
+            //movement = _spawner.WorldBounds.ConstrainMovement(transform.position, movement);
 
             Vector3 newPosition = transform.position + movement;
             newPosition = _spawner.WorldBounds.GetAboveGroundPosition(newPosition, touchRange * 0.8f);
 
             transform.position = newPosition;
 
-            _velocity = movement.normalized * _baseSpeed;
+            //_velocity = movement.normalized * _baseSpeed;
             transform.rotation = Quaternion.LookRotation(_velocity, isGroundBoid ? _groundBoidHitInfo.normal : Vector3.up);
         }
 
@@ -264,15 +267,48 @@ namespace Freehill.Boids
             // DEBUG: Vector3.down is tested last for the sake of ground boids' _isTouchingGround to update last
             Vector3 groundPushVector = GetGroundPushFrom(transform.forward) + GetGroundPushFrom(Vector3.down);
 
-            Vector3 xOffset = Vector3.zero;
-            Vector3 yOffset = Vector3.zero;
-            Vector3 zOffset = Vector3.zero;
-            _spawner.WorldBounds.GetBoundaryOffsets(transform.position, ref xOffset, ref yOffset, ref zOffset);
+            _spawner.WorldBounds.GetBoundaryOffsets(transform.position, ref _worldOffsetX, ref _worldOffsetY, ref _worldOffsetZ);
 
-            // TODO: use these vectors for  "proximity", "normal vector", and dot-product with velocity to determine force scaling factors
+            Vector3 boundsPushVector = GetWorldPushFrom(_worldOffsetX) + GetWorldPushFrom(_worldOffsetZ);
 
+            // push off the sky
+            if (!isGroundBoid) 
+            {
+                boundsPushVector += GetWorldPushFrom(_worldOffsetY);
+            }
 
-            return groundPushVector.normalized;
+            return (groundPushVector + boundsPushVector).normalized;
+        }
+
+        /// <summary> Returns the scaled pushing force in the direction of <paramref name="boundsAxisOffset"/> as this boid approaches the bounds </summary>
+        /// <param name="boundsAxisOffset"> The vector from the nearest boundary plane along one axis to this boid </param>
+        private Vector3 GetWorldPushFrom(Vector3 boundsAxisOffset)
+        {
+            float offsetMagnitude = boundsAxisOffset.magnitude;
+
+            // FIXME: if boid is out of bounds the ignore the radius limit,
+            // and make the strength directly proportional to the distance away
+            // SOLUTION: or just snap them in bounds, or tune forces to ensure movement usually doesn't escape bounds
+            // SOLUTION: apply a direct center-seeking force with dot-product related strength (weaker when below, stronger when above, but always non-zero)
+            if (offsetMagnitude <= _spawner.BoundsProximityRadius)
+            {
+                // DEBUG: intenially not normalized
+                return boundsAxisOffset / (offsetMagnitude * offsetMagnitude);
+            }
+
+            return Vector3.zero;
+        }
+
+        private bool _triggered = false;
+        private void FixedUpdate()
+        {
+            _triggered = false;
+        }
+
+        // these are the neighbors, etc
+        private void OnTriggerStay(Collider other)
+        {
+            _triggered = true;
         }
 
         /// <summary>
@@ -282,10 +318,8 @@ namespace Freehill.Boids
         /// </summary>
         private Vector3 GetGroundPushFrom(Vector3 direction)
         {
-            Vector3 result = Vector3.zero;
-
             _isTouchingGround = false;
-
+            
             // DEBUG: use a single raycast to test the WorldBounds' TerrainCollider, as well as any Attractor' colliders
             if (Physics.Raycast(new Ray(transform.position, direction), out _groundHitInfo, _spawner.GroundProximityRadius))
             {
@@ -307,26 +341,27 @@ namespace Freehill.Boids
                         _restingPosition = _groundHitInfo.point;
                         _restingNormal = _groundHitInfo.normal;
                     }
-                    return result;
+                    return Vector3.zero;
                 }
 
-                if (!isGroundBoid)
+                if (!isGroundBoid) // outer if-statement implies toHit.magnitude <= _spawner.GroundProximityRadius
                 {
                     // how directly at the surface is the boid moving
                     float directionWeight = Vector3.Dot(transform.forward, _groundHitInfo.normal);
 
-                    if (directionWeight < 0.0f) // only push away if flying toward the ground
+                    if (directionWeight < 0.0f) // only push away if moving toward the ground
                     {
                         // how close the boid is to the ground
                         float proximityWeight = Mathf.Clamp01(1.0f - (toHit.magnitude / _spawner.GroundProximityRadius));
 
+                        // allow the boid to get closer to the ground
                         // DEBUG: intenially not normalized
-                        result = _groundHitInfo.normal * (proximityWeight - directionWeight); // [0,2]
+                        return _groundHitInfo.normal * (proximityWeight * -directionWeight); // [0,1] based on approach
                     }
                 }
             }
 
-            return result;
+            return Vector3.zero;
         }
 
         private Vector3 GetAttractionForce()
@@ -335,9 +370,13 @@ namespace Freehill.Boids
 
             foreach (Transform attractor in _spawner.Attractors) 
             {
-                // force of attraction falls off by square of distance to target
                 Vector3 attractorPull = attractor.position - transform.position;
-                result += (attractorPull / attractorPull.sqrMagnitude);
+
+                // force of attraction decreases by square of distance to target, but only within a fixed range
+                if (attractorPull.sqrMagnitude <= _spawner.AttractorProximityRadius * _spawner.AttractorProximityRadius)
+                {
+                    result += (attractorPull / attractorPull.sqrMagnitude);
+                }
             }
 
             if (_spawner.Attractors.Count() > 1)
@@ -354,9 +393,14 @@ namespace Freehill.Boids
 
             foreach (Transform repulsor in _spawner.Repulsors)
             {
-                // force of repulsion increases by square of distance to target
-                Vector3 repulsorPush = transform.position - repulsor.position;
-                result += (repulsorPush / repulsorPush.sqrMagnitude);
+                // TODO: use a collider or body radius nearest-point, and a different "repulsorRange"/"attractorRange"
+                Vector3 repulsorPush = transform.position - repulsor.position; 
+
+                // force of repulsion decreases by square of distance to target, but only within a fixed range
+                if (repulsorPush.sqrMagnitude <= _spawner.RepulsorProximityRadius * _spawner.RepulsorProximityRadius)
+                { 
+                    result += (repulsorPush / repulsorPush.sqrMagnitude);
+                }
             }
 
             if (_spawner.Repulsors.Count() > 1) 

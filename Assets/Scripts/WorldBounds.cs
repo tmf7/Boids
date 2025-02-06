@@ -100,6 +100,21 @@ namespace Freehill.Boids
             {
                 Gizmos.DrawLine(start, end);
             }
+
+            // edge vector testing
+            Vector3 xOffset = Vector3.zero;
+            Vector3 yOffset = Vector3.zero;
+            Vector3 zOffset = Vector3.zero;
+            GetBoundaryOffsets(_testOrigin.position, ref xOffset, ref yOffset, ref zOffset);
+
+            Gizmos.color = Color.green;
+            Gizmos.DrawLine(_testOrigin.position, _testOrigin.position - yOffset);
+
+            Gizmos.color = Color.red;
+            Gizmos.DrawLine(_testOrigin.position, _testOrigin.position - xOffset);
+
+            Gizmos.color = Color.blue;
+            Gizmos.DrawLine(_testOrigin.position, _testOrigin.position - zOffset);
         }
 
         /// <summary>

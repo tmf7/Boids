@@ -565,16 +565,20 @@ MonoBehaviour:
   _repulsors: []
   _minSpeed: 10
   _maxSpeed: 20
-  _boidNeighborhoodRadius: 20
   _separationWeight: 12
-  _alignmentWeight: 0.5
-  _cohesionWeight: 15
+  _alignmentWeight: 0
+  _cohesionWeight: 2
   _randomWeight: 2
-  _attractionWeight: 4
+  _attractionWeight: 10
   _repulsionWeight: 0
-  _boundaryWeight: 500
-  _gravityWeight: 0.05
+  _boundaryPushWeight: 30
+  _groundPushWeight: 50
+  _gravityWeight: 0.1
+  _boidNeighborhoodRadius: 20
   _groundProximityRadius: 3.09
+  _boundsProximityRadius: 4
+  _attractorProximityRadius: 100
+  _repulsorProximityRadius: 40
 --- !u!4 &558839195
 Transform:
   m_ObjectHideFlags: 0
@@ -696,16 +700,20 @@ MonoBehaviour:
   _repulsors: []
   _minSpeed: 4
   _maxSpeed: 6
-  _boidNeighborhoodRadius: 3
   _separationWeight: 2
   _alignmentWeight: 8
   _cohesionWeight: 1
   _randomWeight: 0.3
   _attractionWeight: 0.5
   _repulsionWeight: 0
-  _boundaryWeight: 500
+  _boundaryPushWeight: 10
+  _groundPushWeight: 0
   _gravityWeight: 0.05
+  _boidNeighborhoodRadius: 3
   _groundProximityRadius: 0.5
+  _boundsProximityRadius: 6
+  _attractorProximityRadius: 20
+  _repulsorProximityRadius: 10
 --- !u!4 &1229560079
 Transform:
   m_ObjectHideFlags: 0

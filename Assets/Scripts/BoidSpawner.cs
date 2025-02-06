@@ -10,38 +10,54 @@ namespace Freehill.Boids
         [SerializeField] private int _spawnAmount = 50;
         [SerializeField][Min(0.25f)] private float _spawnRadius = 20.0f;
 
+        // FIXME: make these dynamic, like attach an "Attractor" script or subtypes to a transform
+        // then either (1) register the attractor with the spawner to share w/boids or (2) have each boid discover objects via collision
+        // SOLUTION: don't make this so generic, solve a specific use case...so...what's the use case?
+        // [] move within a volume
+        // [] group with some, avoid some, attract to some
         [SerializeField] private Transform[] _attractors;
         [SerializeField] private Transform[] _repulsors;
 
-        [Header("Boid Properties")]
+        [Header("Boid Weights")]
         [SerializeField][Min(0.1f)] private float _minSpeed = 10.0f;
         [SerializeField][Min(0.1f)] private float _maxSpeed = 20.0f;
-        [SerializeField] private float _boidNeighborhoodRadius = 3;
         [SerializeField][Min(0.0f)] private float _separationWeight;
         [SerializeField][Min(0.0f)] private float _alignmentWeight;
         [SerializeField][Min(0.0f)] private float _cohesionWeight;
         [SerializeField][Min(0.0f)] private float _randomWeight;
         [SerializeField][Min(0.0f)] private float _attractionWeight;
         [SerializeField][Min(0.0f)] private float _repulsionWeight;
-        [SerializeField][Min(0.0f)] private float _boundaryWeight;
+        [SerializeField][Min(0.0f)] private float _boundaryPushWeight;
+        [SerializeField][Min(0.0f)] private float _groundPushWeight;
         [SerializeField][Min(0.0f)] private float _gravityWeight;
+
+        [Header("Boid Awareness")]
+        [SerializeField] private float _boidNeighborhoodRadius = 3;
         [SerializeField][Min(0.0f)] private float _groundProximityRadius;
+
+        [SerializeField][Min(0.0f)] private float _boundsProximityRadius;
+        [SerializeField][Min(0.0f)] private float _attractorProximityRadius;
+        [SerializeField][Min(0.0f)] private float _repulsorProximityRadius;
 
         // DEBUG: unique random base speeds from this spawner, the same prefab in a different spawner will have a different random base speed
         private Dictionary<int, float> _boidSpeeds = new Dictionary<int, float>();
         private List<Boid> _spawnedBoids = new List<Boid>();
 
         public WorldBounds WorldBounds => _worldBounds;
-        public float BoidNeighborhoodRadius => _boidNeighborhoodRadius;
         public float SeparationWeight => _separationWeight;
         public float AlignmentWeight => _alignmentWeight;
         public float CohesionWeight => _cohesionWeight;
         public float RandomWeight => _randomWeight;
         public float AttractionWeight => _attractionWeight;
         public float RepulsionWeight => _repulsionWeight;
-        public float BoundaryWeight => _boundaryWeight;
+        public float BoundaryPushWeight => _boundaryPushWeight;
         public float GravityWeight => _gravityWeight;
+
+        public float BoidNeighborhoodRadius => _boidNeighborhoodRadius;
         public float GroundProximityRadius => _groundProximityRadius;
+        public float BoundsProximityRadius => _boundsProximityRadius;
+        public float AttractorProximityRadius => _attractorProximityRadius;
+        public float RepulsorProximityRadius => _repulsorProximityRadius;
 
         public IEnumerable<Boid> SpawnedBoids => _spawnedBoids;
         public IEnumerable<Transform> Attractors => _attractors;

@@ -157,16 +157,20 @@ MonoBehaviour:
   _repulsors: []
   _minSpeed: 20
   _maxSpeed: 20
-  _boidNeighborhoodRadius: 80
   _separationWeight: 70
   _alignmentWeight: 0
   _cohesionWeight: 0
   _randomWeight: 0
   _attractionWeight: 0
   _repulsionWeight: 0
-  _boundaryWeight: 500
-  _gravityWeight: 0
-  _groundProximityRadius: 30
+  _boundaryPushWeight: 20
+  _groundPushWeight: 0
+  _gravityWeight: 0.05
+  _boidNeighborhoodRadius: 50
+  _groundProximityRadius: 15
+  _boundsProximityRadius: 15
+  _attractorProximityRadius: 30
+  _repulsorProximityRadius: 30
 --- !u!4 &222724784
 Transform:
   m_ObjectHideFlags: 0
@@ -484,7 +488,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 81ad257b6958092458838ddecb277343, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _testOrigin: {fileID: 0}
+  _testOrigin: {fileID: 1480799633}
   _testLineLength: 100
   _bufferDistance: 5
   _terrainCollider: {fileID: 1322432574}
@@ -532,16 +536,20 @@ MonoBehaviour:
   _repulsors: []
   _minSpeed: 10
   _maxSpeed: 20
-  _boidNeighborhoodRadius: 30
   _separationWeight: 3.8
   _alignmentWeight: 3
   _cohesionWeight: 4.5
   _randomWeight: 5
   _attractionWeight: 0
   _repulsionWeight: 0
-  _boundaryWeight: 500
-  _gravityWeight: 0
-  _groundProximityRadius: 10
+  _boundaryPushWeight: 50
+  _groundPushWeight: 0
+  _gravityWeight: 0.05
+  _boidNeighborhoodRadius: 30
+  _groundProximityRadius: 3
+  _boundsProximityRadius: 5
+  _attractorProximityRadius: 30
+  _repulsorProximityRadius: 50
 --- !u!4 &558839195
 Transform:
   m_ObjectHideFlags: 0
@@ -699,6 +707,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1480799632
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1480799633}
+  m_Layer: 0
+  m_Name: TestOrigin
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1480799633
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1480799632}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.20307748, y: 0.7771578, z: 0.37826085, w: 0.46011302}
+  m_LocalPosition: {x: 168.2, y: 41.4, z: 225.1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: -129.212, y: -62.651, z: 182.941}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -710,3 +749,4 @@ SceneRoots:
   - {fileID: 424415778}
   - {fileID: 1322432576}
   - {fileID: 222724784}
+  - {fileID: 1480799633}
