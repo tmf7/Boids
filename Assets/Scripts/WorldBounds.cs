@@ -1,6 +1,4 @@
 using UnityEngine;
-using GluonGui.Dialog;
-
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -12,16 +10,21 @@ namespace Freehill.Boids
     /// </summary>
     public class WorldBounds : MonoBehaviour
     {
+        [Header("Gizmo Tests")]
         public Transform _testOrigin;
         public float _testLineLength = 100.0f;
         public float _bufferDistance = 5.0f;
 
+        [Header("Bounds")]
         [SerializeField] private TerrainCollider _terrainCollider;
+
+        private Terrain _terrain;
         private RaycastHit _terrainHitInfo;
 
         // only draw extents in inspector because transform position is used as center
         [HideInInspector][SerializeField] private Bounds _bounds;
 
+        public Terrain Terrain => _terrain ??= _terrainCollider.GetComponent<Terrain>();
         public Vector3 Center => _bounds.center;
         public Vector3 Extents => _bounds.extents;
 
@@ -57,6 +60,13 @@ namespace Freehill.Boids
                 return _terrainHitInfo.point + Vector3.up * bufferDistance;
             }
 
+            return point;
+        }
+
+        /// <summary> Returns the point precisely on the TerrainCollider for the given worldspace position </summary>
+        public Vector3 GetOnGroundPosition(Vector3 point)
+        {
+            point.y = Terrain.SampleHeight(point);
             return point;
         }
 

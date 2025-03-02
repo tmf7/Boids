@@ -2,8 +2,9 @@ using UnityEngine;
 
 namespace Freehill.SnakeLand
 {
-    public class VelocitySource : MonoBehaviour
+    public abstract class VelocitySource : MonoBehaviour
     {
-        public virtual Vector3 Velocity { get; }
+        public abstract Vector3 Facing { get; }
+        public abstract float Speed { get; }
     }
 }
