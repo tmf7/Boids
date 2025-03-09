@@ -45,7 +45,7 @@ namespace Freehill.SnakeLand
                 ((AIMovement)_velocitySource).Init(snakesManager, this);
             }
 
-            GrowBy(SnakeMovement.MIN_SNAKE_LENGTH + 100);
+            GrowBy(SnakeMovement.MIN_SNAKE_LENGTH);
         }
 
         private void Update()
@@ -61,8 +61,7 @@ namespace Freehill.SnakeLand
             }
         }
 
-        // FIXME: love picked up as soon as its spawned if running over self
-        // ...also an activation gap is being left which is messing with the ActiveLength calculation
+        // FIXME: don't spawn love if part hasn't started moving yet (ie still in process of growing)
         public void HitSnake(Snake hitSnake, Transform hitPart)
         {
             List<Transform> cutParts = hitSnake._snakeMovement.CutAt(hitPart);
@@ -93,7 +92,7 @@ namespace Freehill.SnakeLand
 
             for (int i = growth; i < length; ++i)
             {
-                Transform snakePart = Instantiate(_snakePartPrefab, _snakeMovement.TailPosition, Quaternion.identity);
+                Transform snakePart = Instantiate(_snakePartPrefab, _snakeMovement.NeckPosition, Quaternion.identity);
                 snakePart.transform.SetParent(transform);
                 _snakeMovement.AddPart(snakePart);
             }

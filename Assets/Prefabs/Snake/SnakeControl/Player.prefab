@@ -47,7 +47,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _snakeHeadPrefab: {fileID: 4206234665704372638, guid: 6e0f9aa4f49aa274189c593c96594c07, type: 3}
   _snakePartPrefab: {fileID: 3415491225268855811, guid: e8e104c584fcd5b47ab4e2f1c83a3f86, type: 3}
-  TEST_LENGTH: 100
   _velocitySource: {fileID: 4107870062741352436}
 --- !u!114 &731829343099379734
 MonoBehaviour:
@@ -153,7 +152,7 @@ Transform:
   m_GameObject: {fileID: 5070963848512910383}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 141, y: 14.7, z: 193.2}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

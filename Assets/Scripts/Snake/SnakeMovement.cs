@@ -27,8 +27,17 @@ namespace Freehill.SnakeLand
         /// <summary> Returns the visible, active, length of the snake. </summary>
         public int ActiveLength => _snakeParts.Count(part => part.gameObject.activeSelf);
 
-        /// <summary> Returns the active tail end position of the snake at which new parts should be instantiated and positioned </summary>
-        public Vector3 TailPosition => _snakeParts[ActiveLength - 1].position;
+        // FIXME: grow from the neck not the tail, set a growth target and spawn **as room is available**
+        // ...don't deactivate parts, just destroy (garbage collect)?
+        // ...or figure out how to efficiently re-arrange the _snakeParts to insert inactive parts from the tail
+        // to behind the neck...as they become active
+
+
+        /// <summary> 
+        /// Returns the active neck position behind the head of the snake
+        /// at which new parts should be instantiated and positioned 
+        /// </summary>
+        public Vector3 NeckPosition => _snakeParts[1].position;
 
         /// <summary>
         /// Returns true if the given item is behind (not at) the given body part number along the length of the snake, with 0 being the head.
@@ -126,23 +135,27 @@ namespace Freehill.SnakeLand
         }
 
         /// <summary> 
-        /// Moves the head, then cascades the body movement according to how the head moved, preserving <see cref="LinkLength"/>.
-        /// NOTE: this allows partial/full snake holding still
+        /// Moves the head, then cascades the body movement counter to how the head moved, nearly preserving <see cref="LinkLength"/> on flat surfaces.
+        /// NOTE: does not perserve the original path traced by the head.
+        /// NOTE: most stable on nearly-planar movement
         /// </summary>
         /// <param name="headMovement">Position offset to apply to the head.</param>
         public void MoveCascade(Vector3 headMovement)
         {
-            Vector3 leaderOldPosition = Head.transform.position;
+            // DEBUG: assumes headMovement is a vector on the XZ plane,
+            // and all movement is on the XZ plane
+            // account for suddent y-axis growth
+            float groundOffset = /*Terrain.SampleHeight(nextPosition) +*/ (Scale * 0.5f);
+            Vector3 leaderPosition = Head.transform.position;
+            leaderPosition.y = groundOffset;
+            Vector3 nextPosition = leaderPosition + headMovement;
 
-            Vector3 nextPosition = Head.transform.position + headMovement;
-            nextPosition.y = Terrain.SampleHeight(nextPosition) + (Scale * 0.5f);
-
-            Head.transform.LookAt(nextPosition); // DEBUG: implicitly face tangent to the interpolated surface normal
+            Head.transform.LookAt(nextPosition);
             Head.transform.position = nextPosition;
 
             Vector3 link;
             Vector3 selfOldPosition;
-            Vector3 jointMovement = Head.transform.position - leaderOldPosition;
+            Vector3 jointMovement = headMovement;
 
             int activeLength = ActiveLength;
             float linkLength = LinkLength;
@@ -150,30 +163,28 @@ namespace Freehill.SnakeLand
 
             for (int i = 1; i < activeLength; ++i)
             {
-                leaderOldPosition = _snakeParts[i - 1].position;
+                leaderPosition = _snakeParts[i - 1].position;
                 selfOldPosition = _snakeParts[i].position;
-                _snakeParts[i].LookAt(leaderOldPosition); // DEBUG: must face leader to maintain LinkLength
 
-                // apply joint friction
-                link = leaderOldPosition - selfOldPosition - jointMovement;
+                // account for suddent y-axis growth
+                selfOldPosition.y = groundOffset; 
+                _snakeParts[i].position = selfOldPosition;
+
+                _snakeParts[i].position -= jointMovement;
+                _snakeParts[i].LookAt(leaderPosition); // PERF: avoids square root
 
                 // allow joints to squish/move past eachother
+                link = leaderPosition - _snakeParts[i].position;
                 if (link.sqrMagnitude >= sqrLinkLength)
                 {
-                    // DEBUG: jointMovement can be clamped to avoid excess motion on very steep inclines
-                    // but more Sqrts will drop FPS
-                    // perserve link lengths, and don't overshoot closing the gap
-                    // jointMovement is negated and added to the axial catchup to keep the whole snake in motion (if a bit laggy)
-                    jointMovement = link - _snakeParts[i].forward * linkLength;
-                    nextPosition = selfOldPosition + jointMovement;
-
-                    // PERF: sampling terrain for every part significantly affects FPS (60FPS for one 200 length snake)
-                    nextPosition.y = Terrain.SampleHeight(nextPosition) + (Scale * 0.5f);
-                    _snakeParts[i].position = nextPosition;
+                    // TODO: set pos.y here if non-planar movement
+                    _snakeParts[i].position = leaderPosition - _snakeParts[i].forward * LinkLength;
                 }
+
+                jointMovement = _snakeParts[i].position - selfOldPosition;
             }
 
-            Vector3 tailPosition = TailPosition;
+            Vector3 tailPosition = NeckPosition;
 
             // DEBUG: inactive parts just track the tail part to avoid visual and physics bugs when re-activated
             for (int i = activeLength; i < _snakeParts.Count; ++i)
@@ -186,7 +197,6 @@ namespace Freehill.SnakeLand
         // TODO: switch to mathematical animation on pickups (no bloated animator)
         // TODO: adjust lighting fidelity
         // TODO: Mesh LODs, and not rendering if off camera
-        // TODO: billboarded pickups as quads
         // TODO: less diverse pickups (eg: just apples), only change color and position and ==> use GPU instancing
         // TODO: compose the snake colliders differently? body under head = all one rigidbody with one composite collider
         // TODO: instead of physics collisions, just do distance checks along/on curves (composite line segment sequences)?

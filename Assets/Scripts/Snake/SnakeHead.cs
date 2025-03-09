@@ -32,6 +32,32 @@ namespace Freehill.SnakeLand
         private const float MOVEMENT_CACHE_THRESHOLD = 1.0f;
 
         /// <summary>
+        /// Interpolates current towards target using an exponential decay curve. 
+        /// Current is renormalized a magnitude of speed.
+        /// </summary>
+        /// <param name="turningRadius">How quick the turn should be from current to target</param>
+        /// <param name="speed">Magnitude of the velocity (assumes constant speed from current to target)</param>
+        private void SmoothLerp(ref Vector3 current, Vector3 target, float turningRadius, float speed)
+        {
+            const float TUNING_FRACTION = 0.7f;
+            float decay = speed / (TUNING_FRACTION * turningRadius);
+
+            // DEBUG: do not use slerp or lerp in place of the base formula: a = b + (a - b)t
+            // because it reverses the intended non-linear recurrent lerp smoothing back to x = a + (b - a)t
+            float alpha = Mathf.Exp(-decay * Time.deltaTime);
+            current = (target + (current - target) * alpha).normalized * speed;
+        }
+
+        // FIXME: just cache every position every frame for every SnakePart, up to a total sqr path length of linkLenthSqr
+        // and have each subsequent part START moving (but not stop) once there's enough length
+        // ...original snake cached new snake head pos and popped tail pos, then rendered everything with new pos list
+        // but variable frame-rate and continuous motion will pevent lock-step ring shuffle...unless they move on fixedupdate?
+        // SOLUTION(?): give snake turning radius, no perfect 180 turns
+        // (rivals seems to have small but non-zero turning radius proportional to maybe half the radius of the snake)
+        // ...have the heading lerp over time to where the player sets the heading (rivals does this, the arrow moves before the head by a bit)
+        // SOLUTION: give each part its own heading, or just the head
+
+        /// <summary>
         /// Accumulates movement distance until MOVEMENT_CACHE_THRESHOLD is reached, which
         /// will cache the current position. 
         /// NOTE: applying movement before or after will result in a different cached position.

@@ -26,6 +26,7 @@ namespace Freehill.SnakeLand
         public override Vector3 Facing => _velocity.normalized;
         public override float Speed => _isSprinting ? _sprintSpeed : _baseSpeed;
 
+        // FIXME(?): this may be more expensive than caching and copying
         private Vector3 HeadPosition => _snake.Head.transform.position;
 
         public void Init(SnakesManager snakesManager, Snake snake)
