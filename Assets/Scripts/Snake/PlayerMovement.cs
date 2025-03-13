@@ -11,25 +11,21 @@ namespace Freehill.SnakeLand
     public class PlayerMovement : VelocitySource
     {
         [SerializeField] private Camera _playerCamera;
-        [SerializeField][Min(0.01f)] private float _baseSpeed = 5.0f;
-        [SerializeField][Min(0.01f)] private float _sprintSpeed = 7.0f;
-        
+
         // CAMERA
         private PositionConstraint _cameraPositionConstraint;
         private Vector3 _maxCameraPosition;
         private float _cameraZoom;
 
         // BODY MOVEMENT
-        private Vector3 _facing;
-        private bool _isSprinting = false;
+        private Vector3 _targetFacing;
 
         private const float MOVE_THRESHOLD = 2500.0f; // square root is 50 pixels
         private const float CAMERA_ANGULAR_SPEED_DEGREES = 90.0f;
         private const float CAMERA_ROTATION_THRESHOLD = 0.1f;
         private const float CAMERA_MAX_ZOOM = 0.8f;
 
-        public override float Speed => _isSprinting ? _sprintSpeed : _baseSpeed;
-        public override Vector3 Facing => _facing;
+        public override Vector3 TargetFacing => _targetFacing;
 
         /// <summary>
         /// Sets the PositionConstraint on this transform to only evaluate relative to the given <paramref name="constraintSource"/>
@@ -104,7 +100,8 @@ namespace Freehill.SnakeLand
 
             if (moveAmountSqr >= MOVE_THRESHOLD)
             {
-                _facing = worldMoveDirection / Mathf.Sqrt(moveAmountSqr);
+                // FIXME: make this the facing target, not the CURRENT facing, then have VelocitySource move towards _facing
+                _targetFacing = worldMoveDirection / Mathf.Sqrt(moveAmountSqr);
             }
         }
     }

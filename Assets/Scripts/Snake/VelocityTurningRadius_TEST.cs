@@ -44,7 +44,7 @@ public class VelocityTurningRadius_TEST : MonoBehaviour
     /// <param name="decay">useful range 1(slow) to 25(fast)</param>
     /// <param name="deltaTime">The most recent time between frames</param>
 
-    // WINNER (fewest operations, most stable, just adjust the tuning fraction)
+    // WINNER? (fewest operations, most stable, just adjust the tuning fraction)
     // non-circular exponential decay
     // requires 1x re-normalization to avoid slowdown
     // accounting for speed in decay provides predicatble radius regardless of speed
@@ -95,7 +95,7 @@ public class VelocityTurningRadius_TEST : MonoBehaviour
         _circle = null;
     }
 
-    // non-circular exponential decay
+    // non-circular exponential decay (has radius even when performing perfect 180 change in heading)
     // doesn't require re-normalization
     // requires 3x sine calls, 2x divisions for slerp (radius fraction can be const a load and multiplied)
     private void ShapedLerpPersist(ref Vector3 current, Vector3 target, float turningRadius, float speed)
@@ -104,38 +104,38 @@ public class VelocityTurningRadius_TEST : MonoBehaviour
         current = Vector3.Slerp(current, target, (Time.deltaTime * speed) / (TUNING_FRACTION * turningRadius));
     }
 
-    // clearly a circle
+    // clearly a circle (even when performing perfect 180 change in heading)
     // requires 1x re-normalizing to avoid destabilazation
-    // requires tuned target-match limit if-statement
-    // predictable radius regardless of speed (unstable in this test bed because of the trigger that changes heading)
+    // requires, 1x sqrt, 1x arccos, 3x if-statements
+    // predictable radius regardless of speed
     private void ApplyTurningAcceleration(ref Vector3 current, Vector3 target, float turningRadius, float speed)
     {
         // assumes uniform circular motion in any moment
         // final velocity be normalized to maintain constant speed around turns
         float angle = Vector3.SignedAngle(current, target, _turningAxis);
-        float angularSpeed = Mathf.Sign(angle) * (speed / turningRadius); 
+        float angularSpeed = System.Math.Sign(angle) * (speed / turningRadius); 
 
         Vector3 acceleration = Vector3.Cross(_turningAxis * angularSpeed, current);
         current = (current + acceleration * Time.deltaTime).normalized * speed;
         //current += acceleration * Time.deltaTime; // can go runaway without normalization
     }
 
-    // clearly a circle
+    // NEW WINNER (optimized quaternion math, clearly cirlce even with 180 heading change, stable, uses heading intead of bulk velocity logic)
+    // clearly a circle (even when performing perfect 180 change in heading)
     // preserves current speed without need of renormalizing
-    // can degenerate if velocity drops to zero
-    // predictable radius regardless of speed (unstable in this test bed because of the trigger that changes heading)
-    // requires tuned target-match limit if-statement
+    // predictable radius regardless of speed
     private void RotateTowards(ref Vector3 current, Vector3 target, float turningRadius, float speed)
     {
         float angle = Vector3.SignedAngle(current, target, _turningAxis);
-        float angularSpeed = Mathf.Sign(angle) * (speed / turningRadius) * Mathf.Rad2Deg;
+        float angularSpeed = System.Math.Sign(angle) * (speed / turningRadius) * Mathf.Rad2Deg;
         Quaternion rotation = Quaternion.AngleAxis(angularSpeed * Time.deltaTime, _turningAxis);
-        current = rotation * current; // DEBUG: turns toward target, but has no defined/defacto-mathematical stopping point
+        current = rotation * current;
     }
 
     private IEnumerator Start()
     {
         _methodLastFrame = _turningMethod;
+
         while (Application.isPlaying)
         {
             yield return new WaitForSeconds(SPAWN_DELAY);
@@ -153,6 +153,7 @@ public class VelocityTurningRadius_TEST : MonoBehaviour
     }
 
     private Coroutine _circle;
+    private Vector3 _currentHeading = Vector3.forward;
     private void Update()
     {
         Vector3 targetVelocity = _headings[(int)_heading] * _speed;
@@ -177,7 +178,7 @@ public class VelocityTurningRadius_TEST : MonoBehaviour
                 ApplyTurningAcceleration(ref _currentVelocity, targetVelocity, _turningRadius, _speed);
                 break;
             case HeadingTurnMethod.ROTATION:
-                RotateTowards(ref _currentVelocity, targetVelocity, _turningRadius, _speed);
+                RotateTowards(ref _currentHeading, _headings[(int)_heading], _turningRadius, _speed);
                 break;
             case HeadingTurnMethod.SHAPED_PERSIST:
                 ShapedLerpPersist(ref _currentVelocity, targetVelocity, _turningRadius, _speed);
@@ -186,7 +187,14 @@ public class VelocityTurningRadius_TEST : MonoBehaviour
                 break;
         }
 
-        transform.position += _currentVelocity * Time.deltaTime;
+        if (_turningMethod != HeadingTurnMethod.ROTATION)
+        {
+            transform.position += _currentVelocity * Time.deltaTime;
+        }
+        else
+        {
+            transform.position += _currentHeading * _speed * Time.deltaTime;
+        }
         _methodLastFrame = _turningMethod;
     }
 }

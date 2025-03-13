@@ -12,7 +12,6 @@ namespace Freehill.SnakeLand
         private SnakesManager _snakesManager;
         private Vector3 _velocity;
         private Vector3 _wanderDirection = Vector3.right;
-        private bool _isSprinting = false;
 
         private List<Pickup> _nearbyPickups = new List<Pickup>();
         private List<SnakePart> _nearbySnakeParts = new List<SnakePart>();
@@ -23,8 +22,7 @@ namespace Freehill.SnakeLand
         private Vector3 _worldOffsetY;
         private Vector3 _worldOffsetZ;
 
-        public override Vector3 Facing => _velocity.normalized;
-        public override float Speed => _isSprinting ? _sprintSpeed : _baseSpeed;
+        public override Vector3 TargetFacing => _velocity.normalized;
 
         // FIXME(?): this may be more expensive than caching and copying
         private Vector3 HeadPosition => _snake.Head.transform.position;

@@ -18,7 +18,7 @@ namespace Freehill.SnakeLand
 
         // scales from 1 @ 6 parts to ~5 @ 200 parts
         private float Scale => ActiveLength > MIN_SNAKE_LENGTH ? SCALE_MULTIPLIER * Mathf.Log(ActiveLength * PART_DIVISOR) + 1 : 1.0f;
-        private Terrain Terrain => _terrain ??= SpawnPointManager.WorldBounds.Terrain;
+        //private Terrain Terrain => _terrain ??= SpawnPointManager.WorldBounds.Terrain;
 
         public SnakeHead Head => _snakeHead;
         public bool IsOwnHead(Transform part) => Head.transform == part;
@@ -52,7 +52,6 @@ namespace Freehill.SnakeLand
         public float LinkLengthOffset { get; set; } = 0.0f;
 
         public float LinkLength => Scale + LinkLengthOffset;
-
 
         private void UpdateScale()
         {

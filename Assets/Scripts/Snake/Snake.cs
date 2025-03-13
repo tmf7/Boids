@@ -6,10 +6,12 @@ namespace Freehill.SnakeLand
     [RequireComponent(typeof(SnakeMovement))]
     public class Snake : MonoBehaviour
     {
+        // TODO: make these dynamic via a menu select
         public SnakeHead _snakeHeadPrefab;
         public Transform _snakePartPrefab;
 
         [SerializeField] private VelocitySource _velocitySource; // PlayerMovment or BoidMovement
+        [SerializeField] private float _turningRadius = 1.0f;
 
         private SnakeMovement _snakeMovement;
         private SnakeHead _snakeHead;
@@ -17,6 +19,8 @@ namespace Freehill.SnakeLand
 
         public SnakeHead Head => _snakeHead;
         public SnakeMovement SnakeMovement => _snakeMovement;
+        public VelocitySource VelocitySource => _velocitySource;
+        public float TurningRadius => _turningRadius;
 
         private void Awake()
         {

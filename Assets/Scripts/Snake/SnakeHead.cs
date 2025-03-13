@@ -12,6 +12,7 @@ namespace Freehill.SnakeLand
 
         private List<Vector3> _priorPositions = new List<Vector3>(SnakeMovement.DEFAULT_SNAKE_CAPACITY);
 
+
         /// <summary> 
         /// Returns the position in the history. Lower indexes are older positions. 
         /// Fallback waypoint is the head itself 
@@ -30,23 +31,6 @@ namespace Freehill.SnakeLand
 
         // FIXME: make this proportional to the #waypoints between links and linkLength
         private const float MOVEMENT_CACHE_THRESHOLD = 1.0f;
-
-        /// <summary>
-        /// Interpolates current towards target using an exponential decay curve. 
-        /// Current is renormalized a magnitude of speed.
-        /// </summary>
-        /// <param name="turningRadius">How quick the turn should be from current to target</param>
-        /// <param name="speed">Magnitude of the velocity (assumes constant speed from current to target)</param>
-        private void SmoothLerp(ref Vector3 current, Vector3 target, float turningRadius, float speed)
-        {
-            const float TUNING_FRACTION = 0.7f;
-            float decay = speed / (TUNING_FRACTION * turningRadius);
-
-            // DEBUG: do not use slerp or lerp in place of the base formula: a = b + (a - b)t
-            // because it reverses the intended non-linear recurrent lerp smoothing back to x = a + (b - a)t
-            float alpha = Mathf.Exp(-decay * Time.deltaTime);
-            current = (target + (current - target) * alpha).normalized * speed;
-        }
 
         // FIXME: just cache every position every frame for every SnakePart, up to a total sqr path length of linkLenthSqr
         // and have each subsequent part START moving (but not stop) once there's enough length

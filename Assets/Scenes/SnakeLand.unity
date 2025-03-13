@@ -842,9 +842,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: faf00e62a5435c84087108afa5950f0a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _turningRadius: 4
+  _turningRadius: 1
   _speed: 5
-  _turningMethod: 1
+  _turningMethod: 2
   _heading: 0
   _pathDropPrefab: {fileID: 7817709381444208239, guid: b469dcd4f43afec4593a26e86aef68a3, type: 3}
 --- !u!1 &975564178
