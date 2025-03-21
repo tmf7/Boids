@@ -8,7 +8,9 @@ namespace Freehill.SnakeLand
     {
         private SnakeHead _snakeHead;
         private List<Transform> _snakeParts = new List<Transform>(DEFAULT_SNAKE_CAPACITY);
-        private Terrain _terrain;
+        private Vector3 _totalMovement;
+        private List<Vector3> _priorPositions = new List<Vector3>(DEFAULT_SNAKE_CAPACITY);
+        //private Terrain _terrain;
 
         public const int MIN_SNAKE_LENGTH = 5;
         public const int DEFAULT_SNAKE_CAPACITY = 200;
@@ -19,6 +21,9 @@ namespace Freehill.SnakeLand
         // scales from 1 @ 6 parts to ~5 @ 200 parts
         private float Scale => ActiveLength > MIN_SNAKE_LENGTH ? SCALE_MULTIPLIER * Mathf.Log(ActiveLength * PART_DIVISOR) + 1 : 1.0f;
         //private Terrain Terrain => _terrain ??= SpawnPointManager.WorldBounds.Terrain;
+
+        /// <summary> Dynamic turning radius directly proportional to the snake's scale. </summary>
+        public float TurningRadius => 0.5f * Scale;
 
         public SnakeHead Head => _snakeHead;
         public bool IsOwnHead(Transform part) => Head.transform == part;
@@ -58,6 +63,61 @@ namespace Freehill.SnakeLand
             foreach (Transform snakePart in _snakeParts)
             {
                 snakePart.localScale = Scale * Vector3.one;
+            }
+        }
+
+        /// <summary> 
+        /// Returns the position in the history. Lower indexes are older positions. 
+        /// Fallback waypoint is the head itself 
+        /// </summary>
+        public Vector3 GetWaypoint(int historyIndex)
+        {
+            if (historyIndex >= 0 && historyIndex < _priorPositions.Count)
+            {
+                return _priorPositions[historyIndex];
+            }
+
+            return transform.position;
+        }
+
+        // TODO: produce and consume head-path waypoints
+        // once active tail passes a waypoint, then remove it
+        // ...consider when new parts are added
+        // ...consider maintaining link length
+
+        // SOLUTION(?): cache every frame, or after some total movement
+        // SOLUTION: give each part its own heading to follow the waypoint path laid by the head
+        // SOLUTION(?): spawn new pieces only when there's enough waypoints to follow (spawn in motion)...or when "leader" is far enough away
+
+        /// <summary>
+        /// Accumulates movement distance until MOVEMENT_CACHE_THRESHOLD is reached, which
+        /// will cache the current position. 
+        /// NOTE: applying movement before or after will result in a different cached position.
+        /// </summary>
+        public void AddMovementHistory(Vector3 movement, float linkLengthSqr)
+        {
+            _totalMovement += movement;
+            if (_totalMovement.sqrMagnitude > linkLengthSqr) // FIXME: base threshold on LinkLengthSqr?
+            {
+                _totalMovement = Vector3.zero;
+                CachePosition(transform.position);
+            }
+        }
+
+        /// <summary>
+        /// Adds the given position at the end of the position history such that
+        /// the older positions remain earlier in the history.
+        /// NOTE: the oldest position is overwritten to insert the new position if the capacity is exceeded.
+        /// </summary>
+        private void CachePosition(Vector3 position)
+        {
+            if (_priorPositions.Count < _priorPositions.Capacity - 1)
+            {
+                _priorPositions.Add(position);
+            }
+            else
+            {
+                _priorPositions.Insert(_priorPositions.Count - 1, position);
             }
         }
 

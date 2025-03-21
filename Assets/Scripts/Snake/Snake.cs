@@ -11,7 +11,6 @@ namespace Freehill.SnakeLand
         public Transform _snakePartPrefab;
 
         [SerializeField] private VelocitySource _velocitySource; // PlayerMovment or BoidMovement
-        [SerializeField] private float _turningRadius = 1.0f;
 
         private SnakeMovement _snakeMovement;
         private SnakeHead _snakeHead;
@@ -20,7 +19,6 @@ namespace Freehill.SnakeLand
         public SnakeHead Head => _snakeHead;
         public SnakeMovement SnakeMovement => _snakeMovement;
         public VelocitySource VelocitySource => _velocitySource;
-        public float TurningRadius => _turningRadius;
 
         private void Awake()
         {
@@ -54,11 +52,13 @@ namespace Freehill.SnakeLand
 
         private void Update()
         {
-            Vector3 headMovement = _velocitySource.Facing * _velocitySource.Speed * Time.deltaTime;
-            //_snakeHead.AddMovementHistory(headMovement);
+            _velocitySource.RotateToFaceTargetHeading(_snakeMovement.TurningRadius);
+
+            Vector3 headMovement = _velocitySource.CurrentFacing * _velocitySource.Speed * Time.deltaTime;
+            _snakeHead.AddMovementHistory(headMovement, _snakeMovement.LinkLength);
             _snakeMovement.MoveCascade(headMovement);
 
-            if (_spawnPoint != null && _velocitySource.Facing !=  Vector3.zero) 
+            if (_spawnPoint != null && _velocitySource.CurrentFacing !=  Vector3.zero) 
             { 
                 SpawnPointManager.FreeSpawnPoint(_spawnPoint);
                 _spawnPoint = null;

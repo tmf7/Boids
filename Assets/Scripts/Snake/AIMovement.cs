@@ -5,12 +5,9 @@ namespace Freehill.SnakeLand
 {
     public class AIMovement : VelocitySource
     {
-        [SerializeField][Min(0.01f)] private float _baseSpeed = 5.0f;
-        [SerializeField][Min(0.01f)] private float _sprintSpeed = 7.0f;
-
         private Snake _snake;
         private SnakesManager _snakesManager;
-        private Vector3 _velocity;
+        private Vector3 _trackingVelocity; // used for relative snake motion calculations
         private Vector3 _wanderDirection = Vector3.right;
 
         private List<Pickup> _nearbyPickups = new List<Pickup>();
@@ -22,7 +19,7 @@ namespace Freehill.SnakeLand
         private Vector3 _worldOffsetY;
         private Vector3 _worldOffsetZ;
 
-        public override Vector3 TargetFacing => _velocity.normalized;
+        public override Vector3 TargetFacing => _trackingVelocity.normalized;
 
         // FIXME(?): this may be more expensive than caching and copying
         private Vector3 HeadPosition => _snake.Head.transform.position;
@@ -31,7 +28,7 @@ namespace Freehill.SnakeLand
         {
             _snakesManager = snakesManager;
             _snake = snake;
-            _velocity = Speed * Random.onUnitSphere;
+            _trackingVelocity = Speed * Random.onUnitSphere;
         }
 
         private void FixedUpdate()
@@ -84,7 +81,7 @@ namespace Freehill.SnakeLand
                 //                 // + (pursue * _snakesManager.SnakeHeadEvadeWeight)
                 //                 + (worldPush * _snakesManager.BoundaryPushWeight);
 
-            _velocity += acceleration * Time.deltaTime;
+            _trackingVelocity += acceleration * Time.deltaTime;
             //_velocity = _velocity.normalized * Speed;
         }
 
@@ -155,7 +152,7 @@ namespace Freehill.SnakeLand
         {
             var randomRotation = Quaternion.Euler(0.0f, Random.Range(-_snakesManager.WanderErraticness, _snakesManager.WanderErraticness), 0.0f);
             _wanderDirection = randomRotation * _wanderDirection;
-            return (_wanderDirection * Speed - _velocity);
+            return (_wanderDirection * Speed - _trackingVelocity);
         }
 
         private Vector3 GetSnakePartEvadeForce()
@@ -185,7 +182,7 @@ namespace Freehill.SnakeLand
 
                     // FIXME: maybe just divide by sqrMagnitude instead of normalize
                     Vector3 desiredVelocity = currentPartOffset.normalized * Speed;
-                    evadeAcceleration += desiredVelocity - _velocity;
+                    evadeAcceleration += desiredVelocity - _trackingVelocity;
                 }
             }
 
