@@ -7,7 +7,7 @@ namespace Freehill.SnakeLand
         [SerializeField][Min(0.01f)] private float _baseSpeed = 5.0f;
         [SerializeField][Min(0.01f)] private float _sprintSpeed = 7.0f;
 
-        private Vector3 _currentFacing;
+        private Vector3 _currentFacing = Vector3.right;
         protected bool _isSprinting = false;
 
         // all movement is on the XZ plane
@@ -22,9 +22,10 @@ namespace Freehill.SnakeLand
         /// </summary>
         public void RotateToFaceTargetHeading(float turningRadius)
         {
+            // FIXME: clamping mitigates wobble, but its still there, possibly lerp here instead
             float angle = Vector3.SignedAngle(CurrentFacing, TargetFacing, TURNING_AXIS);
             float angularSpeed = System.Math.Sign(angle) * (Speed / turningRadius) * Mathf.Rad2Deg;
-            Quaternion rotation = Quaternion.AngleAxis(angularSpeed * Time.deltaTime, TURNING_AXIS);
+            Quaternion rotation = Quaternion.AngleAxis(Mathf.Clamp(angularSpeed * Time.deltaTime, angle, -angle), TURNING_AXIS);
             _currentFacing = rotation * _currentFacing;
         }
     }

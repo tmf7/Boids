@@ -9,9 +9,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1247027188892235820}
+  - component: {fileID: 2668630552417187992}
   - component: {fileID: 5656351199975271717}
   - component: {fileID: 9000506504115737299}
-  - component: {fileID: 2668630552417187992}
   - component: {fileID: 4728244490821414817}
   - component: {fileID: 7391628870589736037}
   m_Layer: 0
@@ -36,6 +36,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2668630552417187992
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8757111149997682374}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 756b86741ae00a24eac122f5751bfc1e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _snakeHeadPrefab: {fileID: 5686091406641037362, guid: 383a7daabf4acda4faf046fd5417c267, type: 3}
+  _snakePartPrefab: {fileID: 8086870905957544060, guid: c1e439834c06243409db47d905119f83, type: 3}
+  _snakeMovement: {fileID: 9000506504115737299}
 --- !u!114 &5656351199975271717
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -62,21 +77,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cef19ca6063f61146b5ad715f6e85b4a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &2668630552417187992
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8757111149997682374}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 756b86741ae00a24eac122f5751bfc1e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _snakeHeadPrefab: {fileID: 5686091406641037362, guid: 383a7daabf4acda4faf046fd5417c267, type: 3}
-  _snakePartPrefab: {fileID: 8086870905957544060, guid: c1e439834c06243409db47d905119f83, type: 3}
   _velocitySource: {fileID: 5656351199975271717}
+  _linkLengthOffset: 0.55
 --- !u!136 &4728244490821414817
 CapsuleCollider:
   m_ObjectHideFlags: 0

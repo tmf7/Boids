@@ -5,7 +5,7 @@ namespace Freehill.SnakeLand
 {
     public class AIMovement : VelocitySource
     {
-        private Snake _snake;
+        private Snake _ownerSnake;
         private SnakesManager _snakesManager;
         private Vector3 _trackingVelocity; // used for relative snake motion calculations
         private Vector3 _wanderDirection = Vector3.right;
@@ -22,12 +22,12 @@ namespace Freehill.SnakeLand
         public override Vector3 TargetFacing => _trackingVelocity.normalized;
 
         // FIXME(?): this may be more expensive than caching and copying
-        private Vector3 HeadPosition => _snake.Head.transform.position;
+        private Vector3 HeadPosition => _ownerSnake.Head.transform.position;
 
-        public void Init(SnakesManager snakesManager, Snake snake)
+        public void Init(SnakesManager snakesManager, Snake owner)
         {
             _snakesManager = snakesManager;
-            _snake = snake;
+            _ownerSnake = owner;
             _trackingVelocity = Speed * Random.onUnitSphere;
         }
 
@@ -61,9 +61,6 @@ namespace Freehill.SnakeLand
             }
         }
 
-        // FIXME: 50 snakes is < 1 FPS
-        // SOLUTION: fewer normalize calls (square roots) in SnakeMovement (and maybe AIMovement)
-        // SOLUTION(~): fewer Terrain.sampleHeight calls in SnakeMovement
         private void Update()
         {
             Vector3 seek = GetSeekPickupForce();
@@ -165,8 +162,8 @@ namespace Freehill.SnakeLand
             for (int i = 0; i < _nearbySnakeParts.Count; ++i) 
             {
                 var snakePart = _nearbySnakeParts[i];
-                if (!_snake.SnakeMovement.IsSelf(snakePart.transform) 
-                    || _snake.SnakeMovement.IsPartBehind(snakePart.transform, SnakeMovement.MIN_SNAKE_LENGTH))
+                if (!_ownerSnake.SnakeMovement.IsSelf(snakePart.transform) 
+                    || _ownerSnake.SnakeMovement.IsPartBehind(snakePart.transform, SnakeMovement.MIN_SNAKE_LENGTH))
                 {
                     Vector3 currentPartOffset = HeadPosition - snakePart.transform.position;
 

@@ -13,7 +13,7 @@ namespace Freehill.SnakeLand
         [SerializeField] private Camera _playerCamera;
 
         // CAMERA
-        private PositionConstraint _cameraPositionConstraint;
+        [SerializeField] private PositionConstraint _cameraPositionConstraint;
         private Vector3 _maxCameraPosition;
         private float _cameraZoom;
 
@@ -39,7 +39,6 @@ namespace Freehill.SnakeLand
         {
             EnhancedTouchSupport.Enable(); // must be manually enabled
 
-            _cameraPositionConstraint = GetComponent<PositionConstraint>();
             _maxCameraPosition = _playerCamera.transform.localPosition;
             _cameraZoom = 0.0f;
         }
@@ -100,7 +99,6 @@ namespace Freehill.SnakeLand
 
             if (moveAmountSqr >= MOVE_THRESHOLD)
             {
-                // FIXME: make this the facing target, not the CURRENT facing, then have VelocitySource move towards _facing
                 _targetFacing = worldMoveDirection / Mathf.Sqrt(moveAmountSqr);
             }
         }

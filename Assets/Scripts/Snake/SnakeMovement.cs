@@ -6,57 +6,70 @@ namespace Freehill.SnakeLand
 {
     public class SnakeMovement : MonoBehaviour
     {
+        [SerializeField] private VelocitySource _velocitySource; // PlayerMovment or AIMovement
+
+        /// <summary>
+        /// Every snake part is spherical and symmetrically scaled, 
+        /// so this adds/subtracts space betweeen parts beyond Scale/radius
+        /// </summary>
+        [SerializeField] private float _linkLengthOffset = 0.5f;
+
         private SnakeHead _snakeHead;
         private List<Transform> _snakeParts = new List<Transform>(DEFAULT_SNAKE_CAPACITY);
-        private Vector3 _totalMovement;
-        private List<Vector3> _priorPositions = new List<Vector3>(DEFAULT_SNAKE_CAPACITY);
         //private Terrain _terrain;
+
+        private float _accumulatedMovement = 0.0f;
+        private List<(Vector3 position, float pathLength)> _pathWaypoints = new List<(Vector3, float)>(DEFAULT_SNAKE_CAPACITY);
 
         public const int MIN_SNAKE_LENGTH = 5;
         public const int DEFAULT_SNAKE_CAPACITY = 200;
 
         private const float PART_DIVISOR = 1.0f / MIN_SNAKE_LENGTH;
         private const float SCALE_MULTIPLIER = 1.5f;
+        private const float WAYPOINTS_PER_LINK = 2.0f;
 
         // scales from 1 @ 6 parts to ~5 @ 200 parts
         private float Scale => ActiveLength > MIN_SNAKE_LENGTH ? SCALE_MULTIPLIER * Mathf.Log(ActiveLength * PART_DIVISOR) + 1 : 1.0f;
         //private Terrain Terrain => _terrain ??= SpawnPointManager.WorldBounds.Terrain;
 
         /// <summary> Dynamic turning radius directly proportional to the snake's scale. </summary>
-        public float TurningRadius => 0.5f * Scale;
+        private float TurningRadius => 1.0f * Scale;
 
-        public SnakeHead Head => _snakeHead;
-        public bool IsOwnHead(Transform part) => Head.transform == part;
+        public VelocitySource VelocitySource => _velocitySource;
+        public bool IsOwnHead(Transform part) => _snakeHead.transform == part;
         public bool IsSelf(Transform part) => _snakeParts.Contains(part);
 
         /// <summary> Returns the visible, active, length of the snake. </summary>
         public int ActiveLength => _snakeParts.Count(part => part.gameObject.activeSelf);
 
-        // FIXME: grow from the neck not the tail, set a growth target and spawn **as room is available**
-        // ...don't deactivate parts, just destroy (garbage collect)?
-        // ...or figure out how to efficiently re-arrange the _snakeParts to insert inactive parts from the tail
-        // to behind the neck...as they become active
-
-
+        // FIXME: grow from the neck not the tail, set a growth target and spawn/activate **as path length is available**
         /// <summary> 
-        /// Returns the active neck position behind the head of the snake
-        /// at which new parts should be instantiated and positioned 
+        /// Returns the active tail position of the snake
+        /// at which new parts should be instantiated and positioned
         /// </summary>
-        public Vector3 NeckPosition => _snakeParts[1].position;
+        public Vector3 TailPosition => _snakeParts[_snakeParts.Count - 1].position;// _snakeParts[0].position;
 
         /// <summary>
         /// Returns true if the given item is behind (not at) the given body part number along the length of the snake, with 0 being the head.
         /// Returns false if part is not part of the snake, or at/in-front-of the given part number.
         /// </summary>
         public bool IsPartBehind(Transform part, int partNumber) => _snakeParts.IndexOf(part) > partNumber;
+        public float LinkLength => Scale + _linkLengthOffset;
 
-        /// <summary>
-        /// Every snake part is sperical and symmetrically scaled, 
-        /// so this adds/subtracts space betweeen parts beyond Scale/radius
-        /// </summary>
-        public float LinkLengthOffset { get; set; } = 0.0f;
+        public void Init(SnakesManager snakesManager, Snake owner)
+        {
+            AddHead(owner.Head);
 
-        public float LinkLength => Scale + LinkLengthOffset;
+            if (_velocitySource is PlayerMovement)
+            {
+                // ensure the player camera follows the player's head
+                ((PlayerMovement)_velocitySource).SetCameraConstraintSource(_snakeHead.transform);
+            }
+            else if (_velocitySource is AIMovement)
+            {
+                ((AIMovement)_velocitySource).Init(snakesManager, owner);
+            }
+        }
 
         private void UpdateScale()
         {
@@ -66,74 +79,37 @@ namespace Freehill.SnakeLand
             }
         }
 
-        /// <summary> 
-        /// Returns the position in the history. Lower indexes are older positions. 
-        /// Fallback waypoint is the head itself 
-        /// </summary>
-        public Vector3 GetWaypoint(int historyIndex)
-        {
-            if (historyIndex >= 0 && historyIndex < _priorPositions.Count)
-            {
-                return _priorPositions[historyIndex];
-            }
-
-            return transform.position;
-        }
-
-        // TODO: produce and consume head-path waypoints
-        // once active tail passes a waypoint, then remove it
-        // ...consider when new parts are added
-        // ...consider maintaining link length
-
-        // SOLUTION(?): cache every frame, or after some total movement
-        // SOLUTION: give each part its own heading to follow the waypoint path laid by the head
-        // SOLUTION(?): spawn new pieces only when there's enough waypoints to follow (spawn in motion)...or when "leader" is far enough away
-
         /// <summary>
-        /// Accumulates movement distance until MOVEMENT_CACHE_THRESHOLD is reached, which
-        /// will cache the current position. 
-        /// NOTE: applying movement before or after will result in a different cached position.
+        /// Accumulates movement distance regardless of direction.
+        /// When a threshold is reached the current position is cached. 
+        /// <para/>
+        /// DEBUG: applying movement before or after will result in a different cached position.
         /// </summary>
-        public void AddMovementHistory(Vector3 movement, float linkLengthSqr)
+        private void AddMovementHistory(Vector3 movement)
         {
-            _totalMovement += movement;
-            if (_totalMovement.sqrMagnitude > linkLengthSqr) // FIXME: base threshold on LinkLengthSqr?
-            {
-                _totalMovement = Vector3.zero;
-                CachePosition(transform.position);
-            }
-        }
+            float frameMovementThreshold = LinkLength / WAYPOINTS_PER_LINK;
+            float movementMag = movement.magnitude; // PERF: once per frame
 
-        /// <summary>
-        /// Adds the given position at the end of the position history such that
-        /// the older positions remain earlier in the history.
-        /// NOTE: the oldest position is overwritten to insert the new position if the capacity is exceeded.
-        /// </summary>
-        private void CachePosition(Vector3 position)
-        {
-            if (_priorPositions.Count < _priorPositions.Capacity - 1)
+            _accumulatedMovement += movementMag;
+
+            if (_accumulatedMovement > frameMovementThreshold)
             {
-                _priorPositions.Add(position);
-            }
-            else
-            {
-                _priorPositions.Insert(_priorPositions.Count - 1, position);
+                _pathWaypoints.Add((_snakeHead.transform.position, _accumulatedMovement));
+                _accumulatedMovement = 0.0f;
+
+                while (_pathWaypoints.Count > (ActiveLength * WAYPOINTS_PER_LINK))
+                {
+                    _pathWaypoints.RemoveAt(0);
+                }
             }
         }
 
         private void OnDrawGizmos()
         {
-            if (Head != null)
+            Gizmos.color = new Color(1.0f, 0.0f, 0.0f, 0.5f);
+            for (int i = 0; i < _pathWaypoints.Count; i++) 
             {
-                for (int i = 1; i < _snakeParts.Count; ++i)
-                {
-                    Gizmos.color = Color.white;
-                    Gizmos.DrawWireSphere(_snakeParts[i].position, LinkLength);
-
-                    float linkLength = (_snakeParts[i - 1].position - _snakeParts[i].position).magnitude;
-                    Gizmos.color = linkLength <= LinkLength ? Color.white : Color.red;
-                    Gizmos.DrawLine(_snakeParts[i].position, _snakeParts[i - 1].position);
-                }
+                Gizmos.DrawSphere(_pathWaypoints[i].position, Scale * 0.25f);
             }
         }
 
@@ -156,7 +132,7 @@ namespace Freehill.SnakeLand
             return activatedParts;
         }
 
-        public void AddHead(SnakeHead head)
+        private void AddHead(SnakeHead head)
         {
             _snakeHead = head;
             AddPart(_snakeHead.transform);
@@ -193,24 +169,104 @@ namespace Freehill.SnakeLand
             return cutParts;
         }
 
+        // ===== PERF LIST ======
+        // TODO: reduce triangles
+        // TODO: switch to mathematical animation on pickups (no bloated animator)
+        // TODO: adjust lighting fidelity
+        // TODO: Mesh LODs, and not rendering if off camera
+        // TODO: less diverse pickups (eg: just apples), only change color and position and ==> use GPU instancing
+        // TODO: compose the snake colliders differently? body under head = all one rigidbody with one composite collider
+        // TODO: instead of physics collisions, just do distance checks along/on curves (composite line segment sequences)?
+        public void UpdateBody()
+        {
+            _velocitySource.RotateToFaceTargetHeading(TurningRadius);
+            Vector3 headMovement = _velocitySource.CurrentFacing * _velocitySource.Speed * Time.deltaTime;
+
+            // DEBUG: assumes headMovement is a vector on the XZ plane,
+            // and all movement is on the XZ plane
+            // account for suddent y-axis growth
+            float groundOffset = /*Terrain.SampleHeight(nextPosition) +*/ (Scale * 0.5f);
+            Vector3 leaderPosition = _snakeHead.transform.position;
+            leaderPosition.y = groundOffset;
+            Vector3 nextPosition = leaderPosition + headMovement;
+
+            _snakeHead.transform.LookAt(nextPosition);
+            _snakeHead.transform.position = nextPosition;
+            AddMovementHistory(headMovement);
+
+            if (_pathWaypoints.Count < 1)
+            {
+                return;
+            }
+
+            int activeLength = ActiveLength;
+            float linkLength = LinkLength;
+            float pathLength = (_pathWaypoints[_pathWaypoints.Count - 1].position - _snakeHead.transform.position).magnitude;
+            float waypointLength = 0.0f;
+            const float PATH_LENGTH_TOLERANCE = 0.01f;
+
+            // iterating pathIndex from [Count - 1, 0] is the path head to tail
+            // interpolate positions of all parts along the cached path of the head
+            for (int i = 1, pathIndex = _pathWaypoints.Count - 1; i < activeLength && pathIndex >= 1; ++i)
+            {
+                // never use the 0th waypointLength because it cant provide a inter-waypoint path direction
+                while (pathIndex >= 1)
+                {
+                    waypointLength = _pathWaypoints[pathIndex].pathLength;
+
+                    // never use the 0th waypointLength
+                    if (pathLength + waypointLength > linkLength || pathIndex == 1)
+                    {
+                        break;
+                    }
+
+                    pathLength += waypointLength;
+                    pathIndex--;
+                }
+
+                // [0,1] fraction of current waypointLength needed to match LinkLength
+                float t = (linkLength - pathLength) / waypointLength;
+
+                if (pathLength + (t * waypointLength) < linkLength - PATH_LENGTH_TOLERANCE)
+                {
+                    break;
+                }
+
+                Vector3 offset = t * (_pathWaypoints[pathIndex - 1].position - _pathWaypoints[pathIndex].position);
+                _snakeParts[i].position = _pathWaypoints[pathIndex].position + offset;
+                _snakeParts[i].LookAt(_snakeParts[i - 1].position);
+
+                // preserve any remainder for the next part
+                // ensure pathIndex (ie one waypointLength) isnt counted twice
+                pathLength = (1.0f - t) * waypointLength;
+                pathIndex--;
+            }
+        }
+    }
+
+    #region EXPENSIVE_DO_NOT_USE
+#if EXPENSIVE_MOVEMENT
         /// <summary> 
         /// Moves the head, then cascades the body movement counter to how the head moved, nearly preserving <see cref="LinkLength"/> on flat surfaces.
         /// NOTE: does not perserve the original path traced by the head.
         /// NOTE: most stable on nearly-planar movement
         /// </summary>
-        /// <param name="headMovement">Position offset to apply to the head.</param>
-        public void MoveCascade(Vector3 headMovement)
+        public void MoveCascade()
         {
+            _velocitySource.RotateToFaceTargetHeading(TurningRadius);
+            Vector3 headMovement = _velocitySource.CurrentFacing * _velocitySource.Speed * Time.deltaTime;
+
             // DEBUG: assumes headMovement is a vector on the XZ plane,
             // and all movement is on the XZ plane
             // account for suddent y-axis growth
             float groundOffset = /*Terrain.SampleHeight(nextPosition) +*/ (Scale * 0.5f);
-            Vector3 leaderPosition = Head.transform.position;
+            Vector3 leaderPosition = _snakeHead.transform.position;
             leaderPosition.y = groundOffset;
             Vector3 nextPosition = leaderPosition + headMovement;
 
-            Head.transform.LookAt(nextPosition);
-            Head.transform.position = nextPosition;
+            _snakeHead.transform.LookAt(nextPosition);
+            _snakeHead.transform.position = nextPosition;
+            AddMovementHistory(headMovement);
 
             Vector3 link;
             Vector3 selfOldPosition;
@@ -243,7 +299,7 @@ namespace Freehill.SnakeLand
                 jointMovement = _snakeParts[i].position - selfOldPosition;
             }
 
-            Vector3 tailPosition = NeckPosition;
+            Vector3 tailPosition = TailPosition;
 
             // DEBUG: inactive parts just track the tail part to avoid visual and physics bugs when re-activated
             for (int i = activeLength; i < _snakeParts.Count; ++i)
@@ -251,74 +307,6 @@ namespace Freehill.SnakeLand
                 _snakeParts[i].position = tailPosition;
             }
         }
-
-        // TODO: reduce triangles
-        // TODO: switch to mathematical animation on pickups (no bloated animator)
-        // TODO: adjust lighting fidelity
-        // TODO: Mesh LODs, and not rendering if off camera
-        // TODO: less diverse pickups (eg: just apples), only change color and position and ==> use GPU instancing
-        // TODO: compose the snake colliders differently? body under head = all one rigidbody with one composite collider
-        // TODO: instead of physics collisions, just do distance checks along/on curves (composite line segment sequences)?
-        /*
-        public void MoveConstant(Vector3 headMovement, float speed)
-        {
-            // TODO: use the trail instead of projected leader points (they wiggle too much)
-            // TODO: make SnakePart to cache velocities, and which SnakeHead waypoint index they're tracking (or by ref)
-            // TODO: use seek steering to overshoot a waypoint
-            // TODO: if dot product of velocity to last seek is negative seek next waypoint
-            // TODO: ensure the head's path history is long enough to cover the length of the snake
-
-            Vector3 nextPosition = Head.transform.position + headMovement;
-            nextPosition.y = Terrain.SampleHeight(nextPosition) + (Scale * 0.5f);
-
-            Head.transform.LookAt(nextPosition); // DEBUG: implicitly face tangent to the interpolated surface normal
-            Head.transform.position = nextPosition;
-
-            Vector3 target;
-            Vector3 targetOffset;
-            int activeLength = ActiveLength;
-            float linkLength = LinkLength;
-            float sqrLinkLength = linkLength * linkLength;
-
-            for (int i = 1; i < activeLength; ++i)
-            {
-                Transform partTransform = _snakeParts[i].transform;
-                target = Head.GetWaypoint();
-                targetOffset = target - partTransform.position;
-
-                // FIXME: if all parts start facing the same direction, but then the head goes the opposite
-                // direction on start, then ...FollowIndex will immediately go out of bounds and just follow the head
-
-                // FIXME: if a new waypoint is added and pushes the indexed waypoint back in the array
-                // then the FollowIndex will be incorrect...maybe just give each a waypoint to ref or copy
-                // ...then how is that Vector3 updated?
-                while (Vector3.Dot(targetOffset, partTransform.forward) <= 0.0f)
-                {
-                    target = Head.GetWaypoint();
-                }
-
-                // FIXME: only move if distance from target or leader?
-                // ...if target, then as soon as too close to a target it'll stop (could be useful)
-                // ...if leader, then if leader squishes past then it'll stop despite the target being ahead
-                // SOLUTION: only START movement after leaderOffset > linkLength, but don't STOP movement if leaderOffset < linkLength
-                // ie CONTINUED movement should disregard leaderOffset
-                if (targetOffset.sqrMagnitude >= sqrLinkLength)
-                {
-                    // move straight at/past the target, such that sampling the terrain height is (mostly) not necessary
-                    partTransform.LookAt(target);
-                    Vector3 partVelocity = _snakeParts[i].transform.forward * speed;
-                    partTransform.position += partVelocity * Time.deltaTime;
-                }
-            }
-
-            Vector3 tailPosition = TailPosition;
-
-            // DEBUG: inactive parts just track the tail part to avoid visual and physics bugs when re-activated
-            for (int i = activeLength; i < _snakeParts.Count; ++i)
-            {
-                _snakeParts[i].transform.position = tailPosition;
-            }
-        }
-        */
-    }
+#endif
+    #endregion EXPENSIVE_DO_NOT_USE
 }

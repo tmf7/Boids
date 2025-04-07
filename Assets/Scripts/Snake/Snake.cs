@@ -10,59 +10,32 @@ namespace Freehill.SnakeLand
         public SnakeHead _snakeHeadPrefab;
         public Transform _snakePartPrefab;
 
-        [SerializeField] private VelocitySource _velocitySource; // PlayerMovment or BoidMovement
+        [SerializeField] private SnakeMovement _snakeMovement;
 
-        private SnakeMovement _snakeMovement;
         private SnakeHead _snakeHead;
-        private SpawnPoint _spawnPoint;
 
         public SnakeHead Head => _snakeHead;
         public SnakeMovement SnakeMovement => _snakeMovement;
-        public VelocitySource VelocitySource => _velocitySource;
 
-        private void Awake()
+        public void Init(SnakesManager snakesManager)
         {
-            _snakeMovement = GetComponent<SnakeMovement>();
-
             // DEBUG: head added first instead of having a unique function
             _snakeHead = Instantiate(_snakeHeadPrefab, transform.position, Quaternion.identity);
             _snakeHead.transform.SetParent(transform);
-            _snakeMovement.AddHead(_snakeHead);
-        }
 
-        // DEBUG: Call this in Start to allow PlayerMovement to initialize CameraPositionConstraint
-        public void Init(SnakesManager snakesManager)
-        {
-            _spawnPoint = SpawnPointManager.GetRandomSpawnPoint();
-            transform.position = SpawnPointManager.GetJitteredPosition(_spawnPoint);
+            // DEBUG: snake spawn points are never freed for re-use
+            SpawnPoint spawnPoint = SpawnPointManager.GetRandomSpawnPoint();
+            transform.position = SpawnPointManager.GetJitteredPosition(spawnPoint);
             transform.rotation = Quaternion.identity;
 
-            if (_velocitySource is PlayerMovement)
-            {
-                // ensure the player camera follows the player's head
-                ((PlayerMovement)_velocitySource).SetCameraConstraintSource(_snakeHead.transform);
-            }
-            else if (_velocitySource is AIMovement)
-            {
-                ((AIMovement)_velocitySource).Init(snakesManager, this);
-            }
+            _snakeMovement.Init(snakesManager, this);
 
             GrowBy(SnakeMovement.MIN_SNAKE_LENGTH);
         }
 
         private void Update()
         {
-            _velocitySource.RotateToFaceTargetHeading(_snakeMovement.TurningRadius);
-
-            Vector3 headMovement = _velocitySource.CurrentFacing * _velocitySource.Speed * Time.deltaTime;
-            _snakeHead.AddMovementHistory(headMovement, _snakeMovement.LinkLength);
-            _snakeMovement.MoveCascade(headMovement);
-
-            if (_spawnPoint != null && _velocitySource.CurrentFacing !=  Vector3.zero) 
-            { 
-                SpawnPointManager.FreeSpawnPoint(_spawnPoint);
-                _spawnPoint = null;
-            }
+            _snakeMovement.UpdateBody();
         }
 
         // FIXME: don't spawn love if part hasn't started moving yet (ie still in process of growing)
@@ -70,10 +43,6 @@ namespace Freehill.SnakeLand
         {
             List<Transform> cutParts = hitSnake._snakeMovement.CutAt(hitPart);
             PickupManager.SpawnLove(cutParts);
-
-            // FIXME: the hitSnake Head's history MAY need to remove older waypoints and shift data
-            // ...unless each snake part is steering fine using the array as-is reglardless of cuts
-            // ...List.Inserts at capacity will push out the cut data over time anyway
         }
 
         public void HitPickup(Pickup pickup)
@@ -96,13 +65,10 @@ namespace Freehill.SnakeLand
 
             for (int i = growth; i < length; ++i)
             {
-                Transform snakePart = Instantiate(_snakePartPrefab, _snakeMovement.NeckPosition, Quaternion.identity);
+                Transform snakePart = Instantiate(_snakePartPrefab, _snakeMovement.TailPosition, Quaternion.identity);
                 snakePart.transform.SetParent(transform);
                 _snakeMovement.AddPart(snakePart);
             }
-
-            //const int INTER_JOINT_WAYPOINTS = 2;
-            //_snakeHead.ExpandHistory(_snakeMovement.ActiveLength * INTER_JOINT_WAYPOINTS);
         }
     }
 }

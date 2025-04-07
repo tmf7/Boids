@@ -47,7 +47,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _snakeHeadPrefab: {fileID: 4206234665704372638, guid: 6e0f9aa4f49aa274189c593c96594c07, type: 3}
   _snakePartPrefab: {fileID: 3415491225268855811, guid: e8e104c584fcd5b47ab4e2f1c83a3f86, type: 3}
-  _velocitySource: {fileID: 4107870062741352436}
+  _snakeMovement: {fileID: 731829343099379734}
 --- !u!114 &731829343099379734
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -60,6 +60,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cef19ca6063f61146b5ad715f6e85b4a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _velocitySource: {fileID: 4107870062741352436}
+  _linkLengthOffset: 0.55
 --- !u!1 &1334058168114842726
 GameObject:
   m_ObjectHideFlags: 0
@@ -106,9 +108,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1bfcaa580f6f0bb4986b201eaafdd4c3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _playerCamera: {fileID: 4815479520625090981}
   _baseSpeed: 20
   _sprintSpeed: 7
+  _playerCamera: {fileID: 4815479520625090981}
+  _cameraPositionConstraint: {fileID: 4070174494187472677}
 --- !u!1818360608 &4070174494187472677
 PositionConstraint:
   m_ObjectHideFlags: 0
