@@ -16,7 +16,7 @@ namespace Freehill.SnakeLand
 
         private SnakeHead _snakeHead;
         private List<Transform> _snakeParts = new List<Transform>(DEFAULT_SNAKE_CAPACITY);
-        //private Terrain _terrain;
+        private Terrain _terrain;
 
         private float _accumulatedMovement = 0.0f;
         private List<(Vector3 position, float pathLength)> _pathWaypoints = new List<(Vector3, float)>(DEFAULT_SNAKE_CAPACITY);
@@ -30,7 +30,7 @@ namespace Freehill.SnakeLand
 
         // scales from 1 @ 6 parts to ~5 @ 200 parts
         private float Scale => ActiveLength > MIN_SNAKE_LENGTH ? SCALE_MULTIPLIER * Mathf.Log(ActiveLength * PART_DIVISOR) + 1 : 1.0f;
-        //private Terrain Terrain => _terrain ??= SpawnPointManager.WorldBounds.Terrain;
+        private Terrain Terrain => _terrain ??= SpawnPointManager.WorldBounds.Terrain;
 
         /// <summary> Dynamic turning radius directly proportional to the snake's scale. </summary>
         private float TurningRadius => 1.0f * Scale;
@@ -97,6 +97,7 @@ namespace Freehill.SnakeLand
                 _pathWaypoints.Add((_snakeHead.transform.position, _accumulatedMovement));
                 _accumulatedMovement = 0.0f;
 
+                // FIXME: change this to _targetLength * WAYPOINTS_PER_LINK
                 while (_pathWaypoints.Count > (ActiveLength * WAYPOINTS_PER_LINK))
                 {
                     _pathWaypoints.RemoveAt(0);
@@ -111,6 +112,16 @@ namespace Freehill.SnakeLand
             {
                 Gizmos.DrawSphere(_pathWaypoints[i].position, Scale * 0.25f);
             }
+        }
+        private int _targetLength = MIN_SNAKE_LENGTH;
+
+        /// <summary>
+        /// Snake will grow by the given amount as path length becomes available (this is not instant length addition).
+        /// NOTE: negative numbers are zeroed
+        /// </summary>
+        public void AddToTargetLength(int addLength)
+        {
+            _targetLength += Mathf.Max(0, addLength);
         }
 
         /// <summary> Returns the number of pre-instantiated, inactive, parts that were activated, up to the given length </summary>
@@ -184,14 +195,14 @@ namespace Freehill.SnakeLand
 
             // DEBUG: assumes headMovement is a vector on the XZ plane,
             // and all movement is on the XZ plane
-            // account for suddent y-axis growth
-            float groundOffset = /*Terrain.SampleHeight(nextPosition) +*/ (Scale * 0.5f);
-            Vector3 leaderPosition = _snakeHead.transform.position;
-            leaderPosition.y = groundOffset;
-            Vector3 nextPosition = leaderPosition + headMovement;
+            // account for sudden y-axis growth
+            Vector3 initialHeadPosition = _snakeHead.transform.position;
+            Vector3 finalHeadPosition = _snakeHead.transform.position + headMovement;
+            finalHeadPosition.y = /*Terrain.SampleHeight(finalHeadPosition) +*/ (Scale * 0.5f);
+            headMovement = finalHeadPosition - initialHeadPosition;
 
-            _snakeHead.transform.LookAt(nextPosition);
-            _snakeHead.transform.position = nextPosition;
+            _snakeHead.transform.LookAt(finalHeadPosition);
+            _snakeHead.transform.position = finalHeadPosition;
             AddMovementHistory(headMovement);
 
             if (_pathWaypoints.Count < 1)
@@ -199,15 +210,16 @@ namespace Freehill.SnakeLand
                 return;
             }
 
-            int activeLength = ActiveLength;
+            int initialActiveLength = ActiveLength;
             float linkLength = LinkLength;
             float pathLength = (_pathWaypoints[_pathWaypoints.Count - 1].position - _snakeHead.transform.position).magnitude;
             float waypointLength = 0.0f;
             const float PATH_LENGTH_TOLERANCE = 0.01f;
 
+            // FIXME: iterate up to i <= _targetLength such that parts must be activated and spawned along the pathLength
             // iterating pathIndex from [Count - 1, 0] is the path head to tail
             // interpolate positions of all parts along the cached path of the head
-            for (int i = 1, pathIndex = _pathWaypoints.Count - 1; i < activeLength && pathIndex >= 1; ++i)
+            for (int i = 1, pathIndex = _pathWaypoints.Count - 1; i < initialActiveLength && pathIndex >= 1; ++i)
             {
                 // never use the 0th waypointLength because it cant provide a inter-waypoint path direction
                 while (pathIndex >= 1)
@@ -231,6 +243,14 @@ namespace Freehill.SnakeLand
                 {
                     break;
                 }
+
+                // TODO: if i > initialActiveLength, then activate _snakeParts[i]
+                // TODO: if i > _snakeParts.Count, then spawn parts and position them (until i == _targetLength)
+                // ...ideally keep the original tail part in place, and place new parts in a sliding position behind the head
+                // ie: don't obey linkLength,
+                // and don't force the tail to get suddenly longer backwards,
+                // and don't leave any gaps that parts pop into
+
 
                 Vector3 offset = t * (_pathWaypoints[pathIndex - 1].position - _pathWaypoints[pathIndex].position);
                 _snakeParts[i].position = _pathWaypoints[pathIndex].position + offset;

@@ -135,7 +135,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &110128282
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -313,7 +313,7 @@ MonoBehaviour:
   _testOrigin: {fileID: 0}
   _testLineLength: 100
   _bufferDistance: 5
-  _terrainCollider: {fileID: 0}
+  _terrainCollider: {fileID: 1087795596}
   _bounds:
     m_Center: {x: 150, y: 33, z: 150}
     m_Extent: {x: 130, y: 40, z: 130}
@@ -719,7 +719,7 @@ MonoBehaviour:
   _playerPrefab: {fileID: 5070963848512910383, guid: 8218b6ab0de8b5243839c8cd63a3f58a, type: 3}
   _aiSnakePrefabs:
   - {fileID: 8757111149997682374, guid: 6d36e9767a2e3284284a0cffa9f642c1, type: 3}
-  _aiSnakeSpawns: 20
+  _aiSnakeSpawns: 49
   _pickupSeekWeight: 0
   _wanderWeight: 0.61
   _wanderErraticness: 14.3
@@ -844,10 +844,10 @@ Terrain:
   m_TreeMaximumFullLODCount: 50
   m_DetailObjectDistance: 0
   m_DetailObjectDensity: 0
-  m_HeightmapPixelError: 200
-  m_SplatMapDistance: 50
+  m_HeightmapPixelError: 5
+  m_SplatMapDistance: 10000
   m_HeightmapMinimumLODSimplification: 0
-  m_HeightmapMaximumLOD: 4
+  m_HeightmapMaximumLOD: 0
   m_ShadowCastingMode: 0
   m_DrawHeightmap: 1
   m_DrawInstanced: 1

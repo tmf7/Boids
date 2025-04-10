@@ -56,6 +56,7 @@ namespace Freehill.SnakeLand
                 GameObject aiSnakeGO = Instantiate(_aiSnakePrefabs[Random.Range(0, _aiSnakePrefabs.Count)]);
                 aiSnakeGO.GetComponentInChildren<Snake>().Init(this);
                 _spawnedSnakeAIs.Add(aiSnakeGO);
+                aiSnakeGO.name += $" ({i})";
             }
         }
 

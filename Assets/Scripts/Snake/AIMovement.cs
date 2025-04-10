@@ -31,38 +31,64 @@ namespace Freehill.SnakeLand
             _trackingVelocity = Speed * Random.onUnitSphere;
         }
 
-        private void FixedUpdate()
-        {
-            _nearbyPickups.Clear();
-            _nearbySnakeParts.Clear();
-            _nearbySnakeHeads.Clear();
-        }
+        // FIXME: these physics callbacks are taking a lot of time each frame, why?
+        // too many collider overlaps parent/child?
+        // inefficient Clears? inefficiaent if statements? duplicated calls (one for each collider involved)
+        // SOLUTION: FixedUpdate is called a bunch (7x-ish) on the first frame because the first frame load time is so high (creating snakes)
+        // SOLUTION: only spawn snakeparts when there's enough path (ie: don't spawn everything on start)
+        // FIXME: there are up to 15 OnTriggerStay calls for one AIMovement in one frame as the player passes over any part of the snake
+        // SOLUTION: perform a specific Physics.OverlapSphere once for the head each frame, don't use FixedUpdate or OnTriggerStay
+        // SOLUTION: Set IgnoreCollision for each newly spawned part against all other parts, only check collision between head and parts
+        // NOTE: OverlapSphere with a distribution of lengths is ~60fps @ 50 snakes
+        // and ~20fps @ 50 snakes of 105 length on quad terrain
+        // ... can be improved with non-alloc and not calling OverlapSphere for each snake each frame
+        // maybe 1/3 of snakes each frame, taking turns, so one snake checks every 3 frames (or 1/3 every 2 frames, etc)
 
-        private void OnTriggerStay(Collider other)
-        {
-            var hitPickup = other.GetComponent<Pickup>();
-            var hitSnakePart = other.GetComponent<SnakePart>();
+        //private static int _fixedUpdateCalls = 0;
+        //private static int _triggerStayCalls = 0;
+        //private void LateUpdate()
+        //{
+        //    _fixedUpdateCalls = 0;
+        //    _triggerStayCalls = 0;
+        //}
+        //private void FixedUpdate()
+        //{
+        //    Debug.Log($"FixedUpdate [{_fixedUpdateCalls++}] for [{name}]");
+        //    //_nearbyPickups.Clear();
+        //    //_nearbySnakeParts.Clear();
+        //    //_nearbySnakeHeads.Clear();
+        //}
 
-            // DEBUG: assumes on call per object (hence no list.contains check before add)
-            if (hitPickup != null)
-            {
-                _nearbyPickups.Add(hitPickup);
-            }
-            else if (hitSnakePart != null)
-            {
-                if (hitSnakePart is not SnakeHead)
-                {
-                    _nearbySnakeParts.Add(hitSnakePart);
-                }
-                else
-                {
-                    _nearbySnakeHeads.Add(hitSnakePart as SnakeHead);
-                }
-            }
-        }
+        //private void OnTriggerStay(Collider other)
+        //{
+        //    Debug.Log($"OnTriggerStay [{_triggerStayCalls++}] for [{name}]");
+        //}
+        //    var hitPickup = other.GetComponent<Pickup>();
+        //    var hitSnakePart = other.GetComponent<SnakePart>();
+
+        //    // DEBUG: assumes on call per object (hence no list.contains check before add)
+        //    if (hitPickup != null)
+        //    {
+        //        _nearbyPickups.Add(hitPickup);
+        //    }
+        //    else if (hitSnakePart != null)
+        //    {
+        //        if (hitSnakePart is not SnakeHead)
+        //        {
+        //            _nearbySnakeParts.Add(hitSnakePart);
+        //        }
+        //        else
+        //        {
+        //            _nearbySnakeHeads.Add(hitSnakePart as SnakeHead);
+        //        }
+        //    }
+        //}
 
         private void Update()
         {
+            var results = Physics.OverlapSphere(HeadPosition, 10.0f);
+            //Debug.Log($"OverlapShere [{name}]: [{results.Length}]");
+
             Vector3 seek = GetSeekPickupForce();
             Vector3 wander = GetWanderForce();
             Vector3 evade = GetSnakePartEvadeForce();
@@ -166,7 +192,6 @@ namespace Freehill.SnakeLand
                     || _ownerSnake.SnakeMovement.IsPartBehind(snakePart.transform, SnakeMovement.MIN_SNAKE_LENGTH))
                 {
                     Vector3 currentPartOffset = HeadPosition - snakePart.transform.position;
-
 
                     // TODO: calculate a scaled collision time based on distance/path offet and headings, and speeds
                     // and evade the future point instead of the current point
