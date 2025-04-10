@@ -138,10 +138,10 @@ namespace Freehill.SnakeLand
         /// <summary> Returns the position jittered and positioned on the surface of the bounds' terrain within the given radius </summary>
         public static Vector3 GetJitteredPosition(SpawnPoint spawnPoint)
         {
-            Vector3 onXZUnitCircle = new Vector3(Random.Range(-1.0f, 1.0f), 0.0f, Random.Range(-1.0f, 1.0f)).normalized;
-            return spawnPoint.position + onXZUnitCircle * _instance._spawnPointRadius;
+            //Vector3 onXZUnitCircle = new Vector3(Random.Range(-1.0f, 1.0f), 0.0f, Random.Range(-1.0f, 1.0f)).normalized;
+            //return spawnPoint.position + onXZUnitCircle * _instance._spawnPointRadius;
 
-            //return _instance._mapBounds.GetOnGroundPosition(spawnPoint.position + Random.onUnitSphere * _instance._spawnPointRadius);
+            return _instance._mapBounds.GetOnGroundPosition(spawnPoint.position + Random.onUnitSphere * _instance._spawnPointRadius);
         }
     }
 }

@@ -18,27 +18,27 @@ namespace Freehill.SnakeLand
         public SnakeHead Head => _snakeHead;
         public SnakeMovement SnakeMovement => _snakeMovement;
 
-        //private static List<int> _lengths = new List<int>(50);
-        //private static int _availableLengthIndex = 0;
-        //private static Random rand = new Random();
-        //static Snake()
-        //{
-        //    _lengths.Clear();
-        //    for (int i = 0; i < 47; i++)
-        //    {
-        //        _lengths.Add(rand.Next(0, 16));
-        //    }
-        //    _lengths.Add(200);
-        //    _lengths.Add(200);
-        //    _lengths.Add(200);
-        //    _availableLengthIndex = 0;
-        //    Debug.Log("Snake Static CTOR Called");
-        //}
+        private static List<int> _lengths = new List<int>(50);
+        private static int _availableLengthIndex = 0;
+        private static Random rand = new Random();
+        static Snake()
+        {
+            _lengths.Clear();
+            for (int i = 0; i < 47; i++)
+            {
+                _lengths.Add(rand.Next(0, 16));
+            }
+            _lengths.Add(200);
+            _lengths.Add(200);
+            _lengths.Add(200);
+            _availableLengthIndex = 0;
+            Debug.Log("Snake Static CTOR Called");
+        }
 
-        //private static int GetLength()
-        //{
-        //    return _lengths[_availableLengthIndex++];
-        //}
+        private static int GetLength()
+        {
+            return _lengths[_availableLengthIndex++];
+        }
 
         public void Init(SnakesManager snakesManager)
         {
@@ -63,7 +63,7 @@ namespace Freehill.SnakeLand
             // SOLUTION: 50 @ 105 length for ~30fps quad terrain when ONLY commenting AIMovement.FixedUpdate and OnTriggerStay
             // ...left SnakeHead trigger events, head rigidbodies all in place
             // ...so consider that logic of pickups, heads, and parts awareness (need it be physics? maybe just math?)
-            GrowBy(SnakeMovement.MIN_SNAKE_LENGTH);
+            GrowBy(SnakeMovement.MIN_SNAKE_LENGTH + GetLength());
         }
 
         private void Update()
@@ -85,7 +85,7 @@ namespace Freehill.SnakeLand
             switch (pickup.Power)
             {
                 // TODO(~): love is 1 growth, fruit is partial growth (0.3, 0.5, etc) and only grow at whole # accumulation
-                case Pickup.POWER.GROW: GrowBy(1); break;
+                case Pickup.POWER.GROW: /*GrowBy(1);*/ break;
                 case Pickup.POWER.BLAST_MAGNET: break;
                 case Pickup.POWER.FIREBALL: break;
                 case Pickup.POWER.TEMP_IMMUNITY: break;

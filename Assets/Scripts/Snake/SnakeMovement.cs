@@ -198,7 +198,7 @@ namespace Freehill.SnakeLand
             // account for sudden y-axis growth
             Vector3 initialHeadPosition = _snakeHead.transform.position;
             Vector3 finalHeadPosition = _snakeHead.transform.position + headMovement;
-            finalHeadPosition.y = /*Terrain.SampleHeight(finalHeadPosition) +*/ (Scale * 0.5f);
+            finalHeadPosition.y = Terrain.SampleHeight(finalHeadPosition) + (Scale * 0.5f);
             headMovement = finalHeadPosition - initialHeadPosition;
 
             _snakeHead.transform.LookAt(finalHeadPosition);
