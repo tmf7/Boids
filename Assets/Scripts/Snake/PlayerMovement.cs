@@ -99,6 +99,7 @@ namespace Freehill.SnakeLand
 
             if (moveAmountSqr >= MOVE_THRESHOLD)
             {
+                _isStopped = false;
                 _targetFacing = worldMoveDirection / Mathf.Sqrt(moveAmountSqr);
             }
         }

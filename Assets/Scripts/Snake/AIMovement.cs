@@ -21,32 +21,26 @@ namespace Freehill.SnakeLand
 
         public override Vector3 TargetFacing => _trackingVelocity.normalized;
 
-        // FIXME(?): this may be more expensive than caching and copying
-        private Vector3 HeadPosition => _ownerSnake.Head.transform.position;
+        private Vector3 HeadPosition => _ownerSnake.HeadPosition;
 
         public void Init(SnakesManager snakesManager, Snake owner)
         {
             _snakesManager = snakesManager;
             _ownerSnake = owner;
             _trackingVelocity = Speed * Random.onUnitSphere;
+            _isStopped = false;
         }
 
-        // FIXME: physics callbacks are taking a lot of time each frame caused by too many collider overlaps parent/child?
-        // SOLUTION: FixedUpdate is called a bunch (7x-ish) on the first frame because the first frame load time is so high (creating snakes)
-        // SOLUTION: only spawn snakeparts when there's enough path (ie: don't spawn everything on start)
-        // FIXME: there are up to 15 OnTriggerStay calls for one AIMovement in one frame as the player passes over any part of the snake
-        // SOLUTION: perform a specific Physics.OverlapSphere once for the head each frame, don't use FixedUpdate or OnTriggerStay
-        // SOLUTION: Set IgnoreCollision for each newly spawned part against all other parts, only check collision between head and parts
-        // NOTE: OverlapSphere with a distribution of lengths is ~60fps @ 50 snakes
-        // and ~20fps @ 50 snakes of 105 length on quad terrain
-        // ... can be improved with non-alloc and not calling OverlapSphere for each snake each frame
-        // maybe 1/3 of snakes each frame, taking turns, so one snake checks every 3 frames (or 1/3 every 2 frames, etc)
+        // TODO: spawn snakeparts when there's enough path (ie: don't spawn everything on start)
+        // TODO: Set IgnoreCollision for each newly spawned part against all other parts, only check collision between head and parts
+        // TODO: perform UpdateNeighborhood on a subset of snakes every X frames to amortize costs
+        // TODO: display FPS on screen
 
         private void UpdateNeighborhood() 
         {
             // TODO: move this const to SnakeManager
             const float neighborhoodDistance_TEST = 10.0f;
-            var hitColliders = Physics.OverlapSphere(HeadPosition, neighborhoodDistance_TEST);
+            var hitColliders = Physics.OverlapSphere(HeadPosition, neighborhoodDistance_TEST); // FIXME: use NonAlloc
             //Debug.Log($"OverlapShere [{name}]: [{results.Length}]");
 
             /*
