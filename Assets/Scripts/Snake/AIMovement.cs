@@ -31,8 +31,6 @@ namespace Freehill.SnakeLand
             _isStopped = false;
         }
 
-        // TODO: spawn snakeparts when there's enough path (ie: don't spawn everything on start)
-        // TODO: Set IgnoreCollision for each newly spawned part against all other parts, only check collision between head and parts
         // TODO: perform UpdateNeighborhood on a subset of snakes every X frames to amortize costs
         // TODO: display FPS on screen
 

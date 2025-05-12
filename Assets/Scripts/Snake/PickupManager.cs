@@ -125,7 +125,7 @@ namespace Freehill.SnakeLand
             }
         }
 
-        public static void SpawnLove(List<Transform> positions)
+        public static void SpawnLove(List<Vector3> positions)
         {
             int spawnsNeeded = positions.Count;
             int spawnCount = 0;

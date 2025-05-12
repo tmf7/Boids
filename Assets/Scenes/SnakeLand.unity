@@ -719,7 +719,7 @@ MonoBehaviour:
   _playerPrefab: {fileID: 5070963848512910383, guid: 8218b6ab0de8b5243839c8cd63a3f58a, type: 3}
   _aiSnakePrefabs:
   - {fileID: 8757111149997682374, guid: 6d36e9767a2e3284284a0cffa9f642c1, type: 3}
-  _aiSnakeSpawns: 0
+  _aiSnakeSpawns: 49
   _pickupSeekWeight: 0
   _wanderWeight: 0.61
   _wanderErraticness: 14.3

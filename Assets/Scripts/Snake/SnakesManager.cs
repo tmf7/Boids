@@ -44,7 +44,7 @@ namespace Freehill.SnakeLand
         public float BoundaryPushWeight => _boundaryPushWeight;
         public float BoundsProximityRadius => _boundsProximityRadius;
 
-        private List<GameObject> _spawnedSnakeAIs = new List<GameObject>();
+        private List<Snake> _spawnedSnakeAIs = new List<Snake>();
 
         private void Start()
         {
@@ -54,17 +54,24 @@ namespace Freehill.SnakeLand
             for (int i = 0; i < _aiSnakeSpawns; ++i)
             {
                 GameObject aiSnakeGO = Instantiate(_aiSnakePrefabs[Random.Range(0, _aiSnakePrefabs.Count)]);
-                aiSnakeGO.GetComponentInChildren<Snake>().Init(this);
-                _spawnedSnakeAIs.Add(aiSnakeGO);
                 aiSnakeGO.name += $" ({i})";
+                Snake aiSnake = aiSnakeGO.GetComponent<Snake>();
+                aiSnake.Init(this);
+                _spawnedSnakeAIs.Add(aiSnake);
             }
         }
 
-        public void DestroyAllSnakes()
+        public void Kill(Snake snake)
+        {
+            snake.Kill();
+        }
+
+        public void DestroyAISnakes()
         {
             for (int i = _spawnedSnakeAIs.Count - 1; i >= 0; --i)
             {
-                Destroy(_spawnedSnakeAIs[i]);
+                _spawnedSnakeAIs[i].Kill();
+                Destroy(_spawnedSnakeAIs[i].gameObject);
             }
             _spawnedSnakeAIs.Clear();
         }
