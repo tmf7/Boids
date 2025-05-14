@@ -34,7 +34,7 @@ namespace Freehill.SnakeLand
             {
                 _spawnPoint = SpawnPointManager.GetRandomSpawnPoint();
                 Vector3 position = SpawnPointManager.GetJitteredPosition(_spawnPoint);
-                position.y += 0.5f; // TODO: Scale * 0.5f;
+                position.y += 0.5f; // FIXME: Scale * 0.5f;
                 transform.position = position;
             }
             else

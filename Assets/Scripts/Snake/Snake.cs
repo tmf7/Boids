@@ -7,7 +7,6 @@ namespace Freehill.SnakeLand
     [RequireComponent(typeof(SnakeMovement))]
     public class Snake : MonoBehaviour
     {
-        // TODO: make these dynamic via a menu select
         public SnakeHead _snakeHeadPrefab;
         public Transform _snakePartPrefab;
         public Transform _snakeTailPrefab;
@@ -63,38 +62,8 @@ namespace Freehill.SnakeLand
 
         public void HitSnake(Snake hitSnake, Transform hitPart)
         {
-            bool tryKill = false;
-
-            // determine attack intention
-            if (hitSnake != this)
-            {
-                // FIXME: null ref _snakeMovement from Kill calls any given frame
-                Vector3 selfFacing = _snakeMovement.VelocitySource.CurrentFacing;
-                Vector3 selfCollisionFacing = (hitSnake._snakeMovement.HeadPosition - _snakeMovement.HeadPosition).normalized;
-                bool isSelfAttacking = Vector3.Dot(selfFacing, selfCollisionFacing) > 0.0f; // somewhat intentional collision
-
-                Vector3 otherFacing = hitSnake._snakeMovement.VelocitySource.CurrentFacing;
-                Vector3 otherCollisionFacing = -selfCollisionFacing;
-                bool isOtherAttacking = Vector3.Dot(otherFacing, otherCollisionFacing) > 0.0f; // somewhat intentional collision
-
-                // tie-breaker stat
-                bool isSelfBigger = _snakeMovement.ActiveLength > hitSnake._snakeMovement.ActiveLength;
-
-                // DEBUG: if neither is attacking then snakes pass through eachother
-                // (eg: zero-value collisionFacing vectors, or grazing collision with both facing away)
-                tryKill = isSelfAttacking && (!isOtherAttacking || isSelfBigger);
-            }
-
-            List<Vector3> cutPartPositions = hitSnake._snakeMovement.CutAt(hitPart, tryKill);
-            PickupManager.SpawnLove(cutPartPositions);
-        }
-
-        public void Kill() 
-        {
-            // FIXME: null refs as snake is dying from this
-            _snakeMovement.Kill();
-            _snakeMovement = null;
-            Destroy(gameObject);
+            //List<Vector3> cutPartPositions = hitSnake._snakeMovement.CutAt(hitPart);
+            //PickupManager.SpawnLove(cutPartPositions);
         }
 
         public void HitPickup(Pickup pickup)

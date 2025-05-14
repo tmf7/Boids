@@ -14,7 +14,6 @@ namespace Freehill.SnakeLand
         /// </summary>
         [SerializeField] private float _linkLengthOffset = 0.5f;
 
-        private SnakesManager _snakesManager;
         private Snake _owner;
         private SnakeHead _snakeHead;
         private List<Transform> _snakeParts = new List<Transform>(DEFAULT_SNAKE_CAPACITY);
@@ -68,7 +67,6 @@ namespace Freehill.SnakeLand
 
         public void Init(SnakesManager snakesManager, Snake owner, SnakeHead head, Transform tail)
         {
-            _snakesManager = snakesManager;
             _owner = owner;
             _snakeHead = head;
 
@@ -180,57 +178,24 @@ namespace Freehill.SnakeLand
             if (!_snakeParts.Contains(newPart))
             {
                 _snakeParts.Add(newPart);
+                newPart.localScale = _currentScale * Vector3.one;
                 newPart.forward = _snakeHead.transform.forward;
             }
         }
 
-        public void Kill()
-        {
-            for (int i = 0; i < _snakeParts.Count; ++i)
-            {
-                Destroy(_snakeParts[i].gameObject);
-            }
-
-            _snakeParts.Clear();
-            _pathWaypoints.Clear();
-            _snakeParts = null;
-            _pathWaypoints = null;
-            _snakeHead = null;
-            _owner = null;
-            _velocitySource = null;
-        }
-
         /// <summary> 
         /// Deactivates (not destroys) all parts positioned behind the given part, and returns all removed parts' positions.
-        /// <para/>
-        /// If <paramref name="tryKill"/> is true and <paramref name="cutPart"/> is a killing cut, then all active positions are returned
-        /// in preparation for destroying this snake and spawning pickups.
-        /// <para/>
-        /// If <paramref name="tryKill"/> is false and <paramref name="cutPart"/> is a killing cut, then an empty list is returned.
-        /// <para/>
-        /// In all other cases the snake is cut at and behind the <paramref name="cutPart"/> position, and all cut positions are returned.
         /// </summary>
-        public List<Vector3> CutAt(Transform cutPart, bool tryKill)
+        public List<Vector3> CutAt(Transform cutPart)
         {
             var partPositions = new List<Vector3>();
             int activeLength = ActiveLength;
             int cutIndex = _snakeParts.IndexOf(cutPart);
 
             // [0][199]...[2][1] with MIN_SNAKE_LENGTH == 2 means [0] and [199] are kill cuts
-            bool isKillCut = cutIndex >= activeLength + 1 - MIN_SNAKE_LENGTH || cutIndex == 0;
-            if (isKillCut) 
+            bool ignoreCut = cutIndex >= activeLength + 1 - MIN_SNAKE_LENGTH || cutIndex == 0;
+            if (ignoreCut) 
             {
-                if (tryKill)
-                {
-                    for (int i = 0; i < activeLength; ++i)
-                    {
-                        partPositions.Add(_snakeParts[i].position);
-                    }
-
-                    // DEBUG: the Destroy calls won't resolve this frame so partPositions will still return fine
-                    _snakesManager.Kill(_owner);
-                }
-
                 return partPositions;
             }
 
@@ -272,7 +237,19 @@ namespace Freehill.SnakeLand
             // account for sudden y-axis growth
             Vector3 initialHeadPosition = HeadPosition;
             Vector3 finalHeadPosition = initialHeadPosition + headMovement;
-            finalHeadPosition.y = Terrain.SampleHeight(finalHeadPosition) + (_currentScale * 0.5f);
+            float expectedYPosition = Terrain.SampleHeight(finalHeadPosition) + (_currentScale * 0.5f);
+
+            // FIXME: only snap if NOT jumping...but do snap if hitting a hill
+            if (finalHeadPosition.y <= expectedYPosition)
+            {
+                _velocitySource.Land();
+                finalHeadPosition.y = expectedYPosition;
+            }
+            else
+            {
+                _velocitySource.ApplyGravityToFacing();
+            }
+
             headMovement = finalHeadPosition - initialHeadPosition;
 
             float headMovementMagnitude = headMovement.magnitude;
@@ -307,10 +284,8 @@ namespace Freehill.SnakeLand
                 _growthLinkLength = Mathf.Min(_growthLinkLength + GROWTH_RATE * VelocitySource.Speed * Time.deltaTime, LinkLength);
             }
 
-            // FIXME: when the scale reaches a approx-plateau, the delta when adding new parts
-            // can become smaller than SNAKE_EPSILON which results in parts spawning with original scale
-            // then popping up to full TargetScale once this if-statment eventually triggers (one or more parts later)
-            // SOLUTION: spawn parts at the _currentScale
+            // DEBUG: when the scale reaches a approx-plateau, the delta when adding new parts
+            // can become smaller than SNAKE_EPSILON, thereby slowing UpdateScale calls until more parts are added
             if (Mathf.Abs(_currentScale - TargetScale) > SNAKE_EPSILON)
             {
                 UpdateScale();

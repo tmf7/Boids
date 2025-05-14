@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.InputSystem.EnhancedTouch;
@@ -5,8 +6,6 @@ using Touch = UnityEngine.InputSystem.EnhancedTouch.Touch;
 
 namespace Freehill.SnakeLand
 {
-    // TODO: add a sprint button UI (hold to sprint)
-    // TODO: fireball UI, magnet UI, immune UI, and timeouts/etc
     [RequireComponent(typeof(PositionConstraint))]
     public class PlayerMovement : VelocitySource
     {
@@ -90,17 +89,20 @@ namespace Freehill.SnakeLand
         {
             Vector2 screenMoveDirection = touch.screenPosition - touch.startScreenPosition;
 
-            // terrain is a height map on the X-Z plane so worldMoveDirection is moved to that plane
+            // terrain is a height map on the XZ-plane so worldMoveDirection is moved to that plane
             Vector3 worldMoveDirection = new Vector3(screenMoveDirection.x, 0.0f, screenMoveDirection.y);
 
-            // always move relative to the camera forward along the X-Z plane
+            // always move relative to the camera forward along the XZ-plane
             worldMoveDirection = Vector3.ProjectOnPlane(_playerCamera.transform.rotation * worldMoveDirection, Vector3.up);
             float moveAmountSqr = worldMoveDirection.sqrMagnitude;
 
             if (moveAmountSqr >= MOVE_THRESHOLD)
             {
                 _isStopped = false;
-                _targetFacing = worldMoveDirection / Mathf.Sqrt(moveAmountSqr);
+                Vector3 XZMovement = worldMoveDirection / Mathf.Sqrt(moveAmountSqr);
+                _targetFacing.x = XZMovement.x;
+                _targetFacing.z = XZMovement.z;
+                _targetFacing.Normalize(); // a non-zero y-axis value provided by Jump() necessitates re-normalization
             }
         }
     }
