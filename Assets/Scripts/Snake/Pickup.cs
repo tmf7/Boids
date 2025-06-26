@@ -14,7 +14,10 @@ namespace Freehill.SnakeLand
 
         [SerializeField] private POWER _power = POWER.GROW;
 
+        private SphereCollider _sphereCollider;
         private SpawnPoint _spawnPoint;
+
+        private const float GROUND_OFFSET_SCALER = 1.2f;
 
         /// <summary> Informs how a snake should respond to touching this pickup. </summary>
         public POWER Power => _power;
@@ -23,6 +26,11 @@ namespace Freehill.SnakeLand
         /// Returns true if object in pool is disabled and can be re-positioned/re-activated.
         /// </summary>
         public bool NeedsRespawn => !gameObject.activeSelf;
+
+        private void Awake()
+        {
+            _sphereCollider = GetComponent<SphereCollider>();
+        }
 
         /// <summary>
         /// Positions and activates this at a random <see cref="SpawnPointManager.GetRandomSpawnPoint"/> or the <paramref name="forcedSpawnPosition"/>
@@ -34,7 +42,7 @@ namespace Freehill.SnakeLand
             {
                 _spawnPoint = SpawnPointManager.GetRandomSpawnPoint();
                 Vector3 position = SpawnPointManager.GetJitteredPosition(_spawnPoint);
-                position.y += 0.5f; // FIXME: Scale * 0.5f;
+                position.y += _sphereCollider.radius * GROUND_OFFSET_SCALER;
                 transform.position = position;
             }
             else

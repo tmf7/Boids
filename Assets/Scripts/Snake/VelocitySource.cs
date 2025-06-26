@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace Freehill.SnakeLand
 {
@@ -7,19 +6,26 @@ namespace Freehill.SnakeLand
     {
         [SerializeField][Min(0.01f)] private float _baseSpeed = 5.0f;
         [SerializeField][Min(0.01f)] private float _sprintSpeed = 7.0f;
+        [SerializeField][Min(0.0f)] private float _jumpSpeed = 20.0f;
 
         private Vector3 _currentFacing = Vector3.right;
+        private Vector3 _fallingVelocity = Vector3.zero;
+        protected bool _isGrounded = true;
         protected bool _isSprinting = false;
         protected bool _isStopped = true;
 
         // all movement is on the XZ plane
-        private static Vector3 TURNING_AXIS = Vector3.up;
+        protected static Vector3 TURNING_AXIS = Vector3.up;
 
+        public Vector3 FallingVelocity => _fallingVelocity;
         public Vector3 CurrentFacing => _currentFacing;
         public abstract Vector3 TargetFacing { get; }
-        public float Speed => _isSprinting ? _sprintSpeed : _baseSpeed;
+        public float GroundSpeed => _isSprinting ? _sprintSpeed : _baseSpeed;
+        public bool IsGrounded => _isGrounded;
         public bool IsSprinting => _isSprinting;
         public bool IsStopped => _isStopped;
+
+        public abstract void Init(SnakesManager snakesManager, Snake ownerSnake);
 
         /// <summary>
         /// Rotates CurrentFacing towards TargetFacing by an angular velocty
@@ -27,46 +33,36 @@ namespace Freehill.SnakeLand
         /// </summary>
         public void RotateToFaceTargetHeading(float turningRadius)
         {
-            //Vector3 currentXZFacing = new Vector3(_currentFacing.x, 0.0f, _currentFacing.z);
-            //Vector3 targetXZFacing = new Vector3(TargetFacing.x, 0.0f, TargetFacing.z);
-            //float angle = Vector3.SignedAngle(currentXZFacing, targetXZFacing, TURNING_AXIS);
-            //float angularSpeed = System.Math.Sign(angle) * (Speed / turningRadius) * Mathf.Rad2Deg;
-            //Quaternion rotation = Quaternion.AngleAxis(Mathf.Clamp(angularSpeed * Time.deltaTime, angle, -angle), TURNING_AXIS);
-            //currentXZFacing = rotation * currentXZFacing;
-            //_currentFacing.x = currentXZFacing.x;
-            //_currentFacing.z = currentXZFacing.z;
-            //_currentFacing.Normalize();
-            _currentFacing.x = TargetFacing.x;
-            _currentFacing.z = TargetFacing.z;
-            //_currentFacing.Normalize();
+            _currentFacing = Vector3.RotateTowards(_currentFacing, TargetFacing, (GroundSpeed / turningRadius) * Time.deltaTime, 0.0f);
         }
 
-        // TODO: alternatively, perform all jump logic in SnakeMovement wherein only the y-position changes over time
-        public void ApplyGravityToFacing()
+        public void StartFall()
         {
-            // FIXME: magic number for angular speed of facing vector
-            Quaternion rotation = Quaternion.AngleAxis(-50.0f * Time.deltaTime, Vector3.Cross(_currentFacing, TURNING_AXIS));
-            _currentFacing = rotation * _currentFacing;
+            _isGrounded = false;
+        }
 
-            // FIXME: should be _isFalling, and that increments speed higher and higher?
-            // ...or speed goes down to zero, then up for a human jump...but this is a crazy snake jump
-            // so maybe crazy logic should apply
-            _isSprinting = true;
+        public void UpdateFall()
+        {
+            const float GRAVITY_FEEL_MULTIPLIER = 5.0f;
+            _fallingVelocity += GRAVITY_FEEL_MULTIPLIER * Physics.gravity * Time.deltaTime;
         }
 
         public void Land()
         { 
-            if (_currentFacing.y != 0.0f) 
-            { 
-                _currentFacing.y = 0.0f;
-                _isSprinting = false;
-            }
+            _currentFacing.y = 0.0f;
+            _fallingVelocity = Vector3.zero;
+            _isGrounded = true;
         }
 
+        // TODO: get rid of pure Jump for snake soccer and snake combat
         public void Jump()
         {
-            Quaternion rotation = Quaternion.AngleAxis(45.0f, Vector3.Cross(_currentFacing, TURNING_AXIS));
-            _currentFacing = rotation * _currentFacing;
+            // FIXME(~): fall grace magic number
+            // FIXME(~): adding to velocity doesn't guarantee a jump height
+            if (_isGrounded || _fallingVelocity.magnitude < 5.0f) 
+            { 
+                _fallingVelocity += _jumpSpeed * Vector3.up;
+            }
         }
     }
 }

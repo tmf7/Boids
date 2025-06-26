@@ -21,13 +21,13 @@ namespace Freehill.SnakeLand
 
         public override Vector3 TargetFacing => _trackingVelocity.normalized;
 
-        private Vector3 HeadPosition => _ownerSnake.HeadPosition;
+        private Vector3 HeadPosition => _ownerSnake.Head.transform.position;
 
-        public void Init(SnakesManager snakesManager, Snake owner)
+        public override void Init(SnakesManager snakesManager, Snake ownerSnake)
         {
             _snakesManager = snakesManager;
-            _ownerSnake = owner;
-            _trackingVelocity = Speed * Random.onUnitSphere;
+            _ownerSnake = ownerSnake;
+            _trackingVelocity = GroundSpeed * Random.onUnitSphere;
             _isStopped = false;
         }
 
@@ -159,7 +159,7 @@ namespace Freehill.SnakeLand
         {
             var randomRotation = Quaternion.Euler(0.0f, Random.Range(-_snakesManager.WanderErraticness, _snakesManager.WanderErraticness), 0.0f);
             _wanderDirection = randomRotation * _wanderDirection;
-            return (_wanderDirection * Speed - _trackingVelocity);
+            return (_wanderDirection * GroundSpeed - _trackingVelocity);
         }
 
         private Vector3 GetSnakePartEvadeForce()
@@ -187,7 +187,7 @@ namespace Freehill.SnakeLand
                     //Vector3 predictedPartOffset = HeadPosition - predictedPartPosition;
 
                     // FIXME: maybe just divide by sqrMagnitude instead of normalize
-                    Vector3 desiredVelocity = currentPartOffset.normalized * Speed;
+                    Vector3 desiredVelocity = currentPartOffset.normalized * GroundSpeed;
                     evadeAcceleration += desiredVelocity - _trackingVelocity;
                 }
             }

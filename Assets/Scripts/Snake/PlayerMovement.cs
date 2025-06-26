@@ -1,4 +1,3 @@
-using System.Collections;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.InputSystem.EnhancedTouch;
@@ -18,6 +17,7 @@ namespace Freehill.SnakeLand
 
         // BODY MOVEMENT
         private Vector3 _targetFacing;
+        private Snake _ownerSnake;
 
         private const float MOVE_THRESHOLD = 2500.0f; // square root is 50 pixels
         private const float CAMERA_ANGULAR_SPEED_DEGREES = 90.0f;
@@ -26,10 +26,16 @@ namespace Freehill.SnakeLand
 
         public override Vector3 TargetFacing => _targetFacing;
 
+        public override void Init(SnakesManager snakesManager, Snake ownerSnake)
+        {
+            _ownerSnake = ownerSnake;
+            SetCameraConstraintSource(_ownerSnake.Head.transform);
+        }
+
         /// <summary>
         /// Sets the PositionConstraint on this transform to only evaluate relative to the given <paramref name="constraintSource"/>
         /// </summary>
-        public void SetCameraConstraintSource(Transform constraintSource)
+        private void SetCameraConstraintSource(Transform constraintSource)
         {
             _cameraPositionConstraint.AddSource(new ConstraintSource { sourceTransform = constraintSource, weight = 1.0f });
         }
@@ -93,16 +99,13 @@ namespace Freehill.SnakeLand
             Vector3 worldMoveDirection = new Vector3(screenMoveDirection.x, 0.0f, screenMoveDirection.y);
 
             // always move relative to the camera forward along the XZ-plane
-            worldMoveDirection = Vector3.ProjectOnPlane(_playerCamera.transform.rotation * worldMoveDirection, Vector3.up);
+            worldMoveDirection = Vector3.ProjectOnPlane(_playerCamera.transform.rotation * worldMoveDirection, TURNING_AXIS);
             float moveAmountSqr = worldMoveDirection.sqrMagnitude;
 
             if (moveAmountSqr >= MOVE_THRESHOLD)
             {
                 _isStopped = false;
-                Vector3 XZMovement = worldMoveDirection / Mathf.Sqrt(moveAmountSqr);
-                _targetFacing.x = XZMovement.x;
-                _targetFacing.z = XZMovement.z;
-                _targetFacing.Normalize(); // a non-zero y-axis value provided by Jump() necessitates re-normalization
+                _targetFacing = worldMoveDirection / Mathf.Sqrt(moveAmountSqr);
             }
         }
     }

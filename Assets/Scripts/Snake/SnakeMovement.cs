@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using static PlasticPipe.PlasticProtocol.Messages.Serialization.ItemHandlerMessagesSerialization;
 
 namespace Freehill.SnakeLand
 {
@@ -31,7 +32,6 @@ namespace Freehill.SnakeLand
         private const float SCALE_MULTIPLIER = 1.5f;
         private const float WAYPOINTS_PER_LINK = 2.0f;
         private const float VELOCITY_BUFFER_FACTOR = 1.33f;
-        private const float LINK_LENGTH_TOLERANCE = 0.01f;
         private const float GROWTH_RATE = 0.33f;
         private const float SCALE_RATE = 0.05f;
         private const float SNAKE_EPSILON = 0.01f;
@@ -43,10 +43,15 @@ namespace Freehill.SnakeLand
 
         /// <summary> Dynamic turning radius directly proportional to the snake's scale. </summary>
         private float TurningRadius => 1.0f * _currentScale;
+
+        /// <summary>
+        /// Returns true if the link just behind the head (ie the "neck") 
+        /// has near LinkLength in size (over/under), otherwise returns false.
+        /// </summary>
         private bool IsNewPartInPosition => Mathf.Abs(_growthLinkLength - LinkLength) < SNAKE_EPSILON;
 
+        public SnakeHead Head => _snakeHead;
         public VelocitySource VelocitySource => _velocitySource;
-        public bool IsOwnHead(Transform part) => _snakeHead.transform == part;
         public bool IsSelf(Transform part) => _snakeParts.Contains(part);
 
         /// <summary> Returns the visible, active, length of the snake. </summary>
@@ -59,10 +64,25 @@ namespace Freehill.SnakeLand
         public Vector3 HeadPosition => _snakeParts[0].position; // DEBUG: equivalent to _snakeHead.transform.position;
 
         /// <summary>
-        /// Returns true if the given item is behind (not at) the given body part number along the length of the snake, with 0 being the head.
+        /// Returns true if the given item is behind (not at) the given 
+        /// body part number along the visible length of the snake, with 0 being the head.
         /// Returns false if part is not part of the snake, or at/in-front-of the given part number.
         /// </summary>
-        public bool IsPartBehind(Transform part, int partNumber) => _snakeParts.IndexOf(part) > partNumber;
+        public bool IsPartBehind(Transform part, int partNumber)
+        {
+            // DEBUG: _snakeParts is arranged as [0][199]...[2][1]
+            // so an input of 1 will check against [0] and [199]
+            int activeLength = ActiveLength;
+            int partIndex = _snakeParts.IndexOf(part);
+
+            if (partIndex == -1 || partNumber == 0)
+            {
+                return false;
+            }
+
+            int partVisibleIndex = activeLength - partIndex;
+            return partVisibleIndex > partNumber;
+        }
         public float LinkLength => _currentScale + _linkLengthOffset;
 
         public void Init(SnakesManager snakesManager, Snake owner, SnakeHead head, Transform tail)
@@ -88,22 +108,14 @@ namespace Freehill.SnakeLand
             _pathWaypoints.Add((tail.position, 0.0f));
             _pathWaypoints.Add((_snakeHead.transform.position, _growthLinkLength));
 
-            if (_velocitySource is PlayerMovement)
-            {
-                // ensure the player camera follows the player's head
-                ((PlayerMovement)_velocitySource).SetCameraConstraintSource(_snakeHead.transform);
-            }
-            else if (_velocitySource is AIMovement)
-            {
-                ((AIMovement)_velocitySource).Init(snakesManager, owner);
-            }
+            _velocitySource.Init(snakesManager, _owner);
         }
 
         private void UpdateScale()
         {
             // increasing length gradually increases _currentScale
             // and decreasing length immediately sets _currentScale to TargetScale
-            _currentScale = Mathf.Min(_currentScale + SCALE_RATE * VelocitySource.Speed * Time.deltaTime, TargetScale);
+            _currentScale = Mathf.Min(_currentScale + SCALE_RATE * VelocitySource.GroundSpeed * Time.deltaTime, TargetScale);
 
             foreach (Transform snakePart in _snakeParts)
             {
@@ -142,6 +154,12 @@ namespace Freehill.SnakeLand
             {
                 Gizmos.DrawSphere(_pathWaypoints[i].position, _currentScale * 0.25f);
             }
+
+            Gizmos.color = Color.blue;
+            Gizmos.DrawSphere(_closestHit.point, 2.0f);
+            Gizmos.color = Color.red;
+            Gizmos.DrawLine(_closestHit.point, _closestHit.point + _closestHit.normal * 3.0f);
+
         }
 
         /// <summary>
@@ -224,13 +242,18 @@ namespace Freehill.SnakeLand
 
         public void UpdateBody()
         {
-            if (VelocitySource.IsStopped) 
+            if (_velocitySource.IsStopped) 
             {
                 return;
             }
 
+            if (!_velocitySource.IsGrounded)
+            {
+                _velocitySource.UpdateFall();
+            }
+
             _velocitySource.RotateToFaceTargetHeading(TurningRadius);
-            Vector3 headMovement = _velocitySource.CurrentFacing * _velocitySource.Speed * Time.deltaTime;
+            Vector3 headMovement = Time.deltaTime * ((_velocitySource.CurrentFacing * _velocitySource.GroundSpeed) + _velocitySource.FallingVelocity);
 
             // DEBUG: assumes headMovement is a vector on the XZ plane,
             // and all movement is on the XZ plane
@@ -239,21 +262,23 @@ namespace Freehill.SnakeLand
             Vector3 finalHeadPosition = initialHeadPosition + headMovement;
             float expectedYPosition = Terrain.SampleHeight(finalHeadPosition) + (_currentScale * 0.5f);
 
-            // FIXME: only snap if NOT jumping...but do snap if hitting a hill
+            // don't fall through ground
             if (finalHeadPosition.y <= expectedYPosition)
             {
                 _velocitySource.Land();
                 finalHeadPosition.y = expectedYPosition;
             }
-            else
+            else if (finalHeadPosition.y >= expectedYPosition) 
             {
-                _velocitySource.ApplyGravityToFacing();
+                // keep XY plane velocity, and accelerate vertical velocity, then apply a delta to the head pos each frame
+                _velocitySource.StartFall();
             }
 
             headMovement = finalHeadPosition - initialHeadPosition;
+            headMovement = AvoidObstacles(initialHeadPosition, headMovement);
+            finalHeadPosition = initialHeadPosition + headMovement;
 
             float headMovementMagnitude = headMovement.magnitude;
-
             _snakeHead.transform.LookAt(finalHeadPosition);
             _snakeHead.transform.position = finalHeadPosition;
             AddMovementHistory(headMovementMagnitude);
@@ -281,7 +306,7 @@ namespace Freehill.SnakeLand
             }
             else
             {
-                _growthLinkLength = Mathf.Min(_growthLinkLength + GROWTH_RATE * VelocitySource.Speed * Time.deltaTime, LinkLength);
+                _growthLinkLength = Mathf.Min(_growthLinkLength + GROWTH_RATE * headMovementMagnitude, LinkLength);
             }
 
             // DEBUG: when the scale reaches a approx-plateau, the delta when adding new parts
@@ -317,21 +342,100 @@ namespace Freehill.SnakeLand
 
                 // [0,1] fraction of current waypointLength needed to match LinkLength
                 float t = (targetLinkLength - pathLength) / waypointLength;
-
-                if (pathLength + (t * waypointLength) < targetLinkLength - LINK_LENGTH_TOLERANCE)
-                {
-                    break;
-                }
-
                 Vector3 offset = t * (_pathWaypoints[pathIndex - 1].position - _pathWaypoints[pathIndex].position);
                 _snakeParts[i].position = _pathWaypoints[pathIndex].position + offset;
-                _snakeParts[i].LookAt(_snakeParts[i + 1 < activeLength ? i + 1 : 0].position);
+                _snakeParts[i].LookAt(_snakeParts[i + 1 < activeLength ? i + 1 : 0].position); // account for [0][199][198]...[2][1] array order
 
                 // preserve any remainder for the next part
                 // ensure pathIndex (ie one waypointLength) isnt counted twice
                 pathLength = (1.0f - t) * waypointLength;
                 pathIndex--;
             }
+        }
+
+        private RaycastHit[] _hitResults = new RaycastHit[5];
+        private bool FindApproachingCollision(Vector3 origin, Vector3 direction, float distance)
+        {
+            // SOLUTION(yep): online docs say normal is opposite to sweep and point is zero if START of sweep is IN collision
+            // ...which makes tangent motion difficult with abritrary and opposite vectors
+            // ...so always move BEFORE hitting...and maybe make the sweep collider smaller
+            // FIXME: account for edge case where snake is already in collision (push out...how much?)
+            int hitCount = Physics.SphereCastNonAlloc(origin, _snakeHead.WorldRadius, direction, _hitResults, distance, -1, QueryTriggerInteraction.Collide);
+            float closestHitDistance = distance;
+
+            for (int i = 0; i < hitCount; ++i)
+            {
+                RaycastHit checkHit = _hitResults[i];
+
+                // only ignore own head and neck, not entire body
+                // ignore terrain because snake snaps to its surface when grounded anyway
+                if (checkHit.transform == Head.transform
+                    || (IsSelf(checkHit.transform) && !IsPartBehind(checkHit.transform, MIN_SNAKE_LENGTH))
+                    || checkHit.transform == Terrain.transform // TODO(~): remove this logic if no longer snapping to terrain
+                    || Vector3.Dot(checkHit.normal, direction) > 0) // skip if already moving away from collision
+                {
+                    continue;
+                }
+
+                if (checkHit.distance < closestHitDistance)
+                {
+                    _closestHit = checkHit;
+                    closestHitDistance = _closestHit.distance;
+                }
+            }
+
+            return closestHitDistance < distance;
+        }
+
+        // TODO: Coil logic -- follow contours of non-terrain objects (ie: don't gost through or cut stuff)
+        // TODO(?): apply gravity (and radius) to waypoints to prevent floating body parts (only rearing parts can "float")
+        // TODO: read up and control rear direction laterally
+        // TODO: move reared and grounded parts separately
+        // TODO: recoil/strike button (longer hold bigger recoil back)
+        // TODO: add movement UI joystick such that releasing joystick stops snake (ie: remove const movement)
+        private RaycastHit _closestHit = new RaycastHit();
+        private Vector3 AvoidObstacles(Vector3 initialHeadPosition, Vector3 headMovement)
+        {
+            float moveDistance = headMovement.magnitude;
+            if (moveDistance <= 0.0f)
+            {
+                return headMovement;
+            }
+
+            // TODO: the goal is to:
+            // (1) travel UP the non-terrain contour (eg: another snake, even self)
+            // (2) anticipate things in the way to at least start to move OVER them
+            // (UP by default, but allow head tilt of rearing control to allow other gaze and push directions)
+
+            // DEBUG: headMovement is used because the head faces along its movement,
+            // which can differ from VelocitySource.CurrentFacing on the XZ-Plane
+            float skinThickness = 0.25f * _snakeHead.WorldRadius; // FIXME(?): ensure this never exceeds moveDistance
+            Vector3 moveDirection = headMovement / moveDistance;
+            if (FindApproachingCollision(initialHeadPosition, moveDirection, moveDistance + skinThickness))
+            {
+                // FIXME: zeroing results in softlock, however letting go negative pushes the snake back by skinThickness
+                // ...which partially helps with pushing out of surface penetration, but is overall incomplete
+                float snapToSurface = Mathf.Max(_closestHit.distance - skinThickness, 0.0f); 
+                Vector3 collideMove = snapToSurface * moveDirection;
+                Vector3 slideMove = (moveDistance - snapToSurface) * Vector3.up;
+
+                // TODO: adjust this slide logic to avoid getting locked up on a secondary collision ("look for open air")
+                //float slideDistance = moveDistance - snapToSurface;
+                //Vector3 slideDirection = Vector3.ProjectOnPlane(moveDirection, _closestHit.normal).normalized;
+                //Vector3 slideMove = slideDirection * slideDistance;
+
+                // TODO(~): account for a second collision during slide
+                //if (FindApproachingCollision(initialHeadPosition + collideMove, slideDirection, slideDistance + skinThickness))
+                //{
+                //    snapToSurface = _closestHit.distance - skinThickness;
+                //    slideMove = snapToSurface * slideDirection;
+                //}
+
+                headMovement = collideMove + slideMove;
+                _velocitySource.Land();
+            }
+
+            return headMovement;
         }
     }
 }

@@ -14,7 +14,7 @@ namespace Freehill.SnakeLand
         [SerializeField] private SnakeMovement _snakeMovement;
 
         public SnakeMovement SnakeMovement => _snakeMovement;
-        public Vector3 HeadPosition => _snakeMovement.HeadPosition;
+        public SnakeHead Head => _snakeMovement.Head;
 
         private static List<int> _lengths = new List<int>(50);
         private static int _availableLengthIndex = 0;
