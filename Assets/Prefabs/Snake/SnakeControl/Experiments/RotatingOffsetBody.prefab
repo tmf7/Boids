@@ -127,11 +127,7 @@ MonoBehaviour:
   _snakePartMotorPrefab: {fileID: 0}
   _dependent: {fileID: 0}
   _linkLength: 2
-  SPEED: 1
-  _omega: 10
-  _eta: 1
-  _alpha: 2
-  _naturalFrequency: 16.125
+  _jointStiffness: 10
   _maxJointAngle: 30
 --- !u!1 &8589422899749261282
 GameObject:
