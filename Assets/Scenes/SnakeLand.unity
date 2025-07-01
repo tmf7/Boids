@@ -2199,7 +2199,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &674820455
 Transform:
   m_ObjectHideFlags: 0
@@ -3871,7 +3871,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1538878587
 Transform:
   m_ObjectHideFlags: 0
@@ -5275,19 +5275,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 359565635857344680, guid: bfac2b3ae37fc0c45a92ba047421fb79, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.9998387
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 359565635857344680, guid: bfac2b3ae37fc0c45a92ba047421fb79, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 359565635857344680, guid: bfac2b3ae37fc0c45a92ba047421fb79, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.01796054
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 359565635857344680, guid: bfac2b3ae37fc0c45a92ba047421fb79, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 359565635857344680, guid: bfac2b3ae37fc0c45a92ba047421fb79, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -5295,7 +5295,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 359565635857344680, guid: bfac2b3ae37fc0c45a92ba047421fb79, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: -2.058
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 359565635857344680, guid: bfac2b3ae37fc0c45a92ba047421fb79, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
@@ -5308,10 +5308,6 @@ PrefabInstance:
     - target: {fileID: 6801405176469173214, guid: bfac2b3ae37fc0c45a92ba047421fb79, type: 3}
       propertyPath: _isHead
       value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 6801405176469173214, guid: bfac2b3ae37fc0c45a92ba047421fb79, type: 3}
-      propertyPath: _dependent
-      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 6801405176469173214, guid: bfac2b3ae37fc0c45a92ba047421fb79, type: 3}
       propertyPath: _snakePartMotorPrefab

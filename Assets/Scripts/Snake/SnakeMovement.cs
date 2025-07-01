@@ -419,6 +419,16 @@ namespace Freehill.SnakeLand
                 Vector3 collideMove = snapToSurface * moveDirection;
                 Vector3 slideMove = (moveDistance - snapToSurface) * Vector3.up;
 
+                // TODO(latest 30 JUN):
+                // Vector3 tangent_maybe = Vector3.Cross(-Physics.gravity.normalized, _closestHit.normal)
+                // ...rotate moveDirection into hit plane using tangent_maybe?
+                // float slideDir = use dot product of rotated moveDirection against tangent_maybe (negative ==> flip)
+                //Vector3 GRAVITY_DIR_UP = -Physics.gravity.normalized;
+                //Vector3 hitTangent = Vector3.Cross(GRAVITY_DIR_UP, _closestHit.normal);
+                // get angle b/t hitTangent and moveDirection, then use hitTangent as rotation axis?
+                //Vector3 slideDir = Quaternion.FromToRotation(_dependent.up, -Physics.gravity.normalized) * moveDirection;
+
+
                 // TODO: adjust this slide logic to avoid getting locked up on a secondary collision ("look for open air")
                 //float slideDistance = moveDistance - snapToSurface;
                 //Vector3 slideDirection = Vector3.ProjectOnPlane(moveDirection, _closestHit.normal).normalized;

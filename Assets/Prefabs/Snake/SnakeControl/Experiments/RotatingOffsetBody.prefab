@@ -129,6 +129,7 @@ MonoBehaviour:
   _linkLength: 2
   _jointStiffness: 10
   _maxJointAngle: 30
+  DRAG_COEFFICIENT: 0
 --- !u!1 &8589422899749261282
 GameObject:
   m_ObjectHideFlags: 0

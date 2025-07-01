@@ -21,7 +21,6 @@ namespace Freehill.SnakeLand
         [SerializeField][Range(0.0f, 89.0f)] private float _maxJointAngle = 30.0f; // DEBUG: smaller will cause joint to whip
 
 
-        private Vector3 _lastKnownPosition;
         private Vector3 _currentHeading = Vector3.forward;
         private float _currentSerpentineRadian = 0.0f;
         private const float _maxSerpentineAngle = 45.0f;
@@ -51,8 +50,7 @@ namespace Freehill.SnakeLand
         // DEBUG: guarantee execution order
         private void Init()
         { 
-            _lastKnownPosition = transform.position;
-            _dependent.LookAt(transform);
+            _dependent.rotation = Quaternion.LookRotation(transform.position - _dependent.position, _dependent.up);
         }
 
         private IEnumerator Start()
@@ -73,39 +71,30 @@ namespace Freehill.SnakeLand
                 return;
             }
 
-            if (_isHead)
-            {
-                // face the head and move the head along a sine wave
-                _currentSerpentineRadian += _angularSpeedRads * Time.deltaTime;
-                float angle = _maxSerpentineAngle * Mathf.Sin(_currentSerpentineRadian);
-                Vector3 trueHeading = Quaternion.AngleAxis(angle, transform.up) * _currentHeading;
-                transform.rotation = Quaternion.FromToRotation(transform.forward, trueHeading) * transform.rotation;
-                transform.position += transform.forward * _speed * Time.deltaTime;
-            }
+            //if (_isHead)
+            //{
+            //    // face the head and move the head along a sine wave
+            //    _currentSerpentineRadian += _angularSpeedRads * Time.deltaTime;
+            //    float angle = _maxSerpentineAngle * Mathf.Sin(_currentSerpentineRadian);
+            //    Vector3 trueHeading = Quaternion.AngleAxis(angle, transform.up) * _currentHeading;
+            //    transform.rotation = Quaternion.FromToRotation(transform.forward, trueHeading) * transform.rotation;
+            //    transform.position += transform.forward * _speed * Time.deltaTime;
+            //}
 
-            Vector3 translation = transform.position - _lastKnownPosition;
-            _dependent.position += translation;
+            // TODO: combine all three motions, ending with a final FACE the leader + linkLength offset
+            GravityInducedTranslation();
+            TranslationInducedRotation();
 
             if (!Mathf.Approximately(Vector3.Dot(_dependent.forward, transform.forward), 1.0f))
             {
-                TranslationInducedRotation(translation);
                 RotationInducedRotation();
             }
-
-            _lastKnownPosition = transform.position;
         }
 
-        private void TranslationInducedRotation(Vector3 movementDelta)
+        private void TranslationInducedRotation()
         {
-            // DEBUG: assumes all movement occurs in facing direction
-            Vector3 localOffset = -_dependent.forward * _linkLength; // enforce linkLength, assumes _dependent is facing this
-            Vector3 catchUp = localOffset - movementDelta;
-            float inducedAngle = Vector3.Angle(catchUp, localOffset);
-            Vector3 rotationAxis = Vector3.Cross(-_dependent.forward, catchUp); // sets rotation direction implicitly
-            Quaternion inducedRotation = Quaternion.AngleAxis(inducedAngle, rotationAxis);
-
-            _dependent.position = transform.position + (inducedRotation * localOffset);
-            _dependent.rotation = Quaternion.LookRotation(transform.position - _dependent.position, transform.up);
+            _dependent.rotation = Quaternion.LookRotation(transform.position - _dependent.position, _dependent.up);
+            _dependent.position = transform.position - _dependent.forward * _linkLength;
         }
 
         private void RotationInducedRotation()
@@ -123,19 +112,43 @@ namespace Freehill.SnakeLand
                 Quaternion inducedRotation = Quaternion.AngleAxis(correctionAngle, rotationAxis);
 
                 _dependent.position = transform.position + (inducedRotation * localOffset);
-                _dependent.rotation = Quaternion.LookRotation(transform.position - _dependent.position, transform.up);
+                _dependent.rotation = Quaternion.LookRotation(transform.position - _dependent.position, _dependent.up);
             }
         }
 
-        private void GravityInducedRotation()
-        {
-            // TODO: move/rotate dependent to align its localOffset with gravity vector
-            // SOLUTION: assume a falling velocity or other movementDelta? and calculate an inducedAngle
-            // SOLUTION: rotationAxis is FROM localOffset TO gravity vector
-            // NOTE: only the head should be left alone because the _dependent is the affected object
+        private Vector3 _dependentVelocity = Vector2.zero;
+        private readonly float GRAVITY_MAG = -Physics.gravity.magnitude;
+        private readonly Vector3 GRAVITY_DIR = Physics.gravity.normalized;
+        [SerializeField] private float DRAG_COEFFICIENT = 0.25f;
 
-            _dependent.position = _dependent.position;
-            _dependent.rotation = Quaternion.LookRotation(transform.position - _dependent.position, transform.up);
+        // chain forces propogation
+        private void GravityInducedTranslation()
+        {
+            // TODO: get xzForward once for the head and apply to all parts
+            //...maybe not because they won't all face on a line
+            Vector3 xzForward = Quaternion.FromToRotation(_dependent.up, -GRAVITY_DIR) * _dependent.forward;
+
+            
+            // TODO: needs more oomph, add the extra gravity force of everything BELOW a part
+            // ...in other words, account for O<-->O<-->O instead of the current O-->O-->O
+            // SOLUTION: go over the snake forward then backward in one frame, treating dependent as the leader 
+            // going backward (ensure original _dependent still faces its leader in the end)
+            float currentAngle = Vector3.Angle(xzForward, -_dependent.forward) * Mathf.Deg2Rad;
+            float sin = Mathf.Sin(currentAngle);
+            float cos = Mathf.Cos(currentAngle);
+            float accelerationX = GRAVITY_MAG * sin * cos;
+            float accelerationY = GRAVITY_MAG * sin * sin - GRAVITY_MAG;
+            _dependentVelocity.x += accelerationX * Time.deltaTime; // velocity along xzForward
+            _dependentVelocity.y += accelerationY * Time.deltaTime; // velocity along GRAVITY_DIR
+
+            // FIXME: Using Max(0,vel.x) prevents the wild sine oscillations, but also prevents reasonable overshoot
+            //_dependentVelocity.x = Mathf.Max(0.0f, _dependentVelocity.x - Mathf.Sign(_dependentVelocity.x) * DRAG_COEFFICIENT * _dependentVelocity.x * _dependentVelocity.x * Time.deltaTime);
+            //_dependentVelocity.y = Mathf.Max(0.0f, _dependentVelocity.y - Mathf.Sign(_dependentVelocity.y) * DRAG_COEFFICIENT * _dependentVelocity.y * _dependentVelocity.y * Time.deltaTime);
+
+            Vector3 gravityMovementDelta = ((xzForward * _dependentVelocity.x) + (GRAVITY_DIR * _dependentVelocity.y)) * Time.deltaTime;
+            _dependent.position += gravityMovementDelta;
+            _dependent.rotation = Quaternion.LookRotation(transform.position - _dependent.position, _dependent.up);
+            _dependent.position = transform.position - _dependent.forward * _linkLength;
         }
 
         private void MuscleInducedRotation()
